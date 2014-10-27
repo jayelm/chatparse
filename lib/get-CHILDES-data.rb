@@ -1,13 +1,13 @@
 require 'find'
 require 'sqlite3'
-require 'corpus-file-info'
+require './corpus-file-info'
 require 'set'
 require 'treetop'
-require 'mor'
-require 'chat'
+require './mor'
+require './chat'
 require 'data_reader'
 
-CHILDES_DIRECTORY = "/Users/timo/Data/Childes/Corpora/"
+CHILDES_DIRECTORY = "~/Dropbox/cs/mit/CHILDES"
 $verb_data = DataReader.hashonkeys_load('/Users/timo/Projects/fragment-grammar/Simulations/PastTense/Data/verbs-CHILDES-SWBD.csv',[:Form,:Category], :CSV)
 
 $verbs = {}
@@ -21,34 +21,34 @@ def to_tree(sn)
   #puts sn.struct.inspect if sn.respond_to?(:struct)
   case
   when sn.terminal? then sn.text_value
-  else 
+  else
     if sn.elements.all? {|e| e.terminal?}
     then (sn.elements.map {|e| e.text_value}).join('')
-    else '(' + sn.extension_modules[0].to_s.sub(/.*::/,'') + " "+ sn.elements.map do |x| 
+    else '(' + sn.extension_modules[0].to_s.sub(/.*::/,'') + " "+ sn.elements.map do |x|
         to_tree(x) if not x.empty?
-      end.join(" ")  + ')' 
+      end.join(" ")  + ')'
     end
   end
-end  
+end
 
 $mor_parser = MorParser.new
-$chat_parser = ChatParser.new 
+$chat_parser = ChatParser.new
 
 class CHILDESUtteranceMetadata
  attr_accessor :encoding, :participants, :languages, :situation, :warnings, :date, :comments, :birth, :location
 
   def initialize(metadata)
     @encoding = ""; @participants={}; @languages=[]; @situation = ""; @warnings=[]; @date = ""; @comments=[]; @birth ={}; @location=""
-    
+
     metadata.each do |field|
       field.gsub!(/[\t]/," ")
       case field
-      when /^@UTF8/ then 
+      when /^@UTF8/ then
         @encoding = "utf8"
       when /^@Begin/ then
-      when /^@Languages:/ then 
+      when /^@Languages:/ then
         @languages = field.gsub(/^@Languages:/, "").strip
-      when /^@Participants:/ then 
+      when /^@Participants:/ then
         participants = field.gsub(/^@Participants:/, "").split(",").map {|x| x.strip}
         participants.each do |p|
           code, name, description = p.split.map {|x| x.strip}
@@ -57,13 +57,13 @@ class CHILDESUtteranceMetadata
       when /^@ID:/ then
         language, corpus, code, age, sex, group, ses, role, education = field.gsub(/^@ID:/, "").split('|').map {|x| x.strip}
         @participants[code] = {} if @participants[code] == nil
-        @participants[code].merge!({ :Language => language, 
-                                     :Corpus => corpus, 
-                                     :Age => age, 
-                                     :Sex => sex, 
-                                     :Group => group, 
-                                     :SES => ses, 
-                                     :Role => role, 
+        @participants[code].merge!({ :Language => language,
+                                     :Corpus => corpus,
+                                     :Age => age,
+                                     :Sex => sex,
+                                     :Group => group,
+                                     :SES => ses,
+                                     :Role => role,
                                      :Education => education})
       when /^@Media:/ then
       when /^@Situation:/ then @situation = field.gsub(/^@Situation:/, "").strip
@@ -92,8 +92,8 @@ class CHILDESUtteranceMetadata
 end
 
 def get_MOR_token_form(word_group)
-  (word_group.map do |w| 
-    case 
+  (word_group.map do |w|
+    case
     when w[:Type]== :Punctuation then w[:Value]
     when w[:Type]== :PreClitic then w[:Word][:Stem]
     when w[:Type]== :Word then w[:Stem]
@@ -105,9 +105,9 @@ end
 
 def get_MOR_token_category(word_group)
   #puts word_group.inspect
-  (word_group.map do |w| 
+  (word_group.map do |w|
      #puts w.inspect
-    case 
+    case
     when w[:Type]== :Punctuation then "Punct"
     when w[:Type]== :PreClitic then w[:Word][:Pos][:Category]
     when w[:Type]== :Word then w[:Pos][:Category]
@@ -119,9 +119,9 @@ end
 
 def get_MOR_token_subcategory(word_group)
   #puts word_group.inspect
-  (word_group.map do |w| 
+  (word_group.map do |w|
      #puts w.inspect
-    case 
+    case
     when w[:Type]== :Punctuation then "Punct"
     when w[:Type]== :PreClitic then w[:Word][:Pos][:SubCategories].join("|")
     when w[:Type]== :Word then w[:Pos][:SubCategories].join("|")
@@ -133,9 +133,9 @@ end
 
 def get_MOR_token_subcategory(word_group)
   #puts word_group.inspect
-  (word_group.map do |w| 
+  (word_group.map do |w|
      #puts w.inspect
-    case 
+    case
     when w[:Type]== :Punctuation then "Punct"
     when w[:Type]== :PreClitic then w[:Word][:Pos][:SubCategories].join("|")
     when w[:Type]== :Word then w[:Pos][:SubCategories].join("|")
@@ -147,9 +147,9 @@ end
 
 def get_MOR_token_fusionalsuffixes(word_group)
   #puts word_group.inspect
-  (word_group.map do |w| 
+  (word_group.map do |w|
      #puts w.inspect
-    case 
+    case
     when w[:Type]== :Punctuation then "Punct"
     when w[:Type]== :PreClitic then w[:Word][:FusionalSuffixes].join("|") if w[:Word][:FusionalSuffixes]
     when w[:Type]== :Word then w[:FusionalSuffixes].join("|") if w[:FusionalSuffixes]
@@ -161,9 +161,9 @@ end
 
 def get_MOR_token_suffixes(word_group)
   #puts word_group.inspect
-  (word_group.map do |w| 
+  (word_group.map do |w|
      #puts w.inspect
-    case 
+    case
     when w[:Type]== :Punctuation then "Punct"
     when w[:Type]== :PreClitic then w[:Word][:Suffixes].join("|") if w[:Word][:Suffixes]
     when w[:Type]== :Word then w[:Suffixes].join("|") if w[:Suffixes]
@@ -184,7 +184,7 @@ class CHILDESUtterance
     @metadata = CHILDESUtteranceMetadata.new(Array.new(metadata))
     @corpus_metadata = Array.new(corpusMetadata)
 
-    tokens = utterance.first.split.map { |t| t.strip }    
+    tokens = utterance.first.split.map { |t| t.strip }
     @speaker= tokens[0].gsub(/[*:]/,"").strip
     @raw_utterance = tokens.slice(1,:end).join(" ").gsub(/[^ ],/, " ,") #we have to make a number of fixes to the raw data to get parsing to work
 
@@ -200,22 +200,22 @@ class CHILDESUtterance
     end
 
     # @utterance_xml = ChildesAnnotation.convert_CHAT2xml( @raw_utterance)
-    # @cleaned_utterance = ChildesAnnotation.childes_annotation2punctuation(@utterance_xml) 
+    # @cleaned_utterance = ChildesAnnotation.childes_annotation2punctuation(@utterance_xml)
     # @utterance_tokens = @cleaned_utterance.split.map {|x| x.strip}
 
     @age =  file_info[:Years].to_f * 12.0 +  file_info[:Months].to_f
     @age_bin = @age.ceil
-    
+
     @annotations = Hash.new nil
     annotations = Array.new(utterance.slice(1,:end))
     annotations.each do |tier|
       case tier
-      when /^%mor:/ then 
+      when /^%mor:/ then
         morph=tier.gsub(/%(.*?):\t/, "").strip
 
         parse=$mor_parser.parse(morph)
         if parse == nil or parse == []
-        then 
+        then
           $mismatches.puts "Can't MOR parse: #{annotations}"
           $stdout.flush
         else
@@ -223,15 +223,14 @@ class CHILDESUtterance
           $stdout.flush
         end
 
-        
         if @tokenized then
           if @annotations[:Morphology]
-            if (not @tokenized.length == @annotations[:Morphology].length) 
-            then 
-              $mismatches.puts "Tokenization and morphology don't match:\n\t#{@raw_utterance}\n\t#{@tokenized.join(' ')}\n\t#{morph}" 
+            if (not @tokenized.length == @annotations[:Morphology].length)
+            then
+              $mismatches.puts "Tokenization and morphology don't match:\n\t#{@raw_utterance}\n\t#{@tokenized.join(' ')}\n\t#{morph}"
               @annotations[:Morphology]=nil
             else
-              @tokenized.length.times do |i| 
+              @tokenized.length.times do |i|
                 f=get_MOR_token_form(@annotations[:Morphology][i])
                 if f != @tokenized[i] then
                   $mismatches.puts "Token and MOR don't match: #{@tokenized[i]}, #{f}"
@@ -242,49 +241,50 @@ class CHILDESUtterance
         else
           $mismatches.puts "Ended up with a nil tokenization:  #{@raw_utterance}"
         end
-          
 
-      when /^%xgra:/ then 
+
+      when /^%xgra:/ then
         @annotations[:Syntax] = tier.gsub(/%(.*?):\t/, "").split.map {|x| x.strip}
-      when /^%com:/ then 
+      when /^%com:/ then
         @annotations[:Com] = tier.gsub(/%(.*?):\t/, "")
-      when /^%act:/ then 
+      when /^%act:/ then
         @annotations[:Action] = tier.gsub(/%(.*?):\t/, "")
-      when /^%int:/ then 
+      when /^%int:/ then
         @annotations[:Intonation] = tier.gsub(/%(.*?):\t/, "")
-      when /^%exp:/ then 
+      when /^%exp:/ then
         @annotations[:Exp] = tier.gsub(/%(.*?):\t/, "")
-      when /^%pho:/ then 
+      when /^%pho:/ then
         @annotations[:Phonology] = tier.gsub(/%(.*?):\t/, "")
-      when /^%spa:/ then 
+      when /^%spa:/ then
         @annotations[:Spa] = tier.gsub(/%(.*?):\t/, "")
-      when /^%par:/ then 
+      when /^%par:/ then
         @annotations[:Par] = tier.gsub(/%(.*?):\t/, "")
-      when /^%alt:/ then 
+      when /^%alt:/ then
         @annotations[:Alt] = tier.gsub(/%(.*?):\t/, "")
-      when /^%gpx:/ then 
+      when /^%gpx:/ then
         @annotations[:Gpx] = tier.gsub(/%(.*?):\t/, "")
-      when /^%sit:/ then 
+      when /^%sit:/ then
         @annotations[:Sit] = tier.gsub(/%(.*?):\t/, "")
-      when /^%add:/ then 
+      when /^%add:/ then
         @annotations[:Add] = tier.gsub(/%(.*?):\t/, "")
-      when /^%err:/ then 
+      when /^%err:/ then
         @annotations[:Err] = tier.gsub(/%(.*?):\t/, "")
-      when /^%eng:/ then 
+      when /^%eng:/ then
         @annotations[:English] = tier.gsub(/%(.*?):\t/, "")
-      when /^%trn:/ then 
+      when /^%trn:/ then
         @annotations[:Trn] = tier.gsub(/%(.*?):\t/, "")
-      when /^%xgrt:/ then 
+      when /^%xgrt:/ then
         @annotations[:Xgrt] = tier.gsub(/%(.*?):\t/, "")
-      when /^%pht:/ then 
+      when /^%pht:/ then
         @annotations[:Pht] = tier.gsub(/%(.*?):\t/, "")
-      else raise "Unknown Tier: #{tier}"end	
+      else raise "Unknown Tier: #{tier}"
+      end
     end
   end
 
   def to_s
     "Utterance: #{@utterance.inspect}" + "\nFile: #{@file.inspect}" + "\nMetaData: #{@metadata.inspect}" + "\nCorpus: #{@corpus.inspect}" + "\nCorpusMetaData: #{@corpusMetadata.inspect}\n"
-  end  
+  end
 end # end childes utterance class
 
 
@@ -296,16 +296,16 @@ def parseCHILDESFile (file_info, corpusMetadata )
   last_field = ""
   lines.each do |line|
     case line
-    when /^@/ then 
+    when /^@/ then
       fields = fields.push(last_field) if not last_field == ""
       last_field = line
-    when /^\*/ then  
+    when /^\*/ then
       fields = fields.push(last_field) if not last_field == ""
       last_field = line
-    when /^%/ then   
+    when /^%/ then
       fields = fields.push(last_field) if not last_field == ""
       last_field = line
-    when /^\t/ then 
+    when /^\t/ then
       last_field += line
     else raise "*****Don't know how to handle line! : #{line}" end
   end
@@ -318,13 +318,13 @@ def parseCHILDESFile (file_info, corpusMetadata )
     field.gsub!(/[\n]/," ")
 
     case field
-    when /^@/ then 
+    when /^@/ then
       metadata = metadata.push(field) if not field == ""
-    when /^\*/ then  
+    when /^\*/ then
       yield CHILDESUtterance.new(utt_num+=1,last_utterance,file_info,metadata,corpusMetadata) if not last_utterance == []
-       #utterances = utterances.push() 
+       #utterances = utterances.push()
       last_utterance = [field]
-    when /^%/ then   
+    when /^%/ then
       last_utterance = last_utterance.push(field)
     else raise "*****Don't know how to handle field! : #{field}" end
 
@@ -333,26 +333,27 @@ def parseCHILDESFile (file_info, corpusMetadata )
 end
 
 def count_words( utterance )
-  if utterance.tokenized 
-    if utterance.annotations[:Morphology] 
-      if not /(Target_Child|Child|Playmate|Non_Human|Environment|Camera_Operator)/ =~ utterance.metadata.participants[utterance.speaker][:Role] then
+  if utterance.tokenized
+    if utterance.annotations[:Morphology]
+      # I parenthesized the entire thing between not and then, not sure if correct
+      if not (/(Target_Child|Child|Playmate|Non_Human|Environment|Camera_Operator)/ =~ utterance.metadata.participants[utterance.speaker][:Role]) then
         if 18.0 <= utterance.age and utterance.age <= 60.0
           utterance.tokenized.length.times do |index|
-            word = utterance.tokenized[index]           
+            word = utterance.tokenized[index]
             morphology=utterance.annotations[:Morphology][index]
             mor_cat = get_MOR_token_category(morphology)
             if /^(v|aux|part)$/ =~ mor_cat
               fusional = get_MOR_token_fusionalsuffixes(morphology)
               suffix = get_MOR_token_suffixes(morphology)
-              mor_subcat = get_MOR_token_subcategory(morphology)
-              tag=case mor_cat 
+              # mor_subcat = get_MOR_token_subcategory(morphology)
+              tag=case mor_cat
                   when /^v$/ then
                     case [fusional, suffix]
                     when ["","PAST"] then "VBD" # regulars
                     when ["PAST",""] then "VBD" # irregulars
                     when ["PRES",""] then "VBP" # are
                     when ["PAST",""] then "VBD" # was
-                    when ["PAST|13S",""] then "VBD" # was                      
+                    when ["PAST|13S",""] then "VBD" # was
                     when ["","3S"] then "VBZ"
                     when ["3S",""] then "VBZ"
                     when ["ZERO",""] then "VBP" # weak verbs
@@ -365,8 +366,8 @@ def count_words( utterance )
                     when ["PAST", ""] then "VBD" # did
                     when ["PRES", ""] then "VBP" # are
                     when ["COND", ""] then "VBP" # would
-                    when ["", ""] then if word=="could" then "VBD" 
-                                       elsif word=="be" then "VB" 
+                    when ["", ""] then if word=="could" then "VBD"
+                                       elsif word=="be" then "VB"
                                        else "VBP" end # shall, can, etc.
                     when ["3S", ""] then "VBZ"
                     when ["PAST|13S",""]  then "VBD" # was
@@ -380,7 +381,7 @@ def count_words( utterance )
                     when ["PERF", ""] then "VBN"
                     else $stderr.puts "Don't know participle type: #{suffix} for word '#{word}' with category '#{mor_cat}' and fusional '#{fusional}'" end
                   else raise "Don't know this verbal category!!" end
-              
+
               if $verb_data.include?([word,tag]) then
                 # puts "#{word},#{mor_cat},#{mor_subcat},#{fusional},#{suffix}"
                 $ages[utterance.age_bin][[word, tag]] += 1
@@ -397,12 +398,13 @@ end
 
 corpus_metadata={}
 $childes_files.each do |file_info|
-  top,bottom = file_info[:Corpus].split(":")
+  top, bottom = file_info[:Corpus].split(":")
+  metadata_file = bottom # FIXME this just silences syntax errors
   metadata_file = "#{CHILDES_DIRECTORY}/#{top}/0metadata.cdc"
 
   if not corpus_metadata.has_key?(metadata_file) then
     $stderr.puts "Processing Corpus: #{file_info[:Corpus]}"
-    corpus_metadata[metadata_file] = File.new(metadata_file, "r").readlines 
+    corpus_metadata[metadata_file] = File.new(metadata_file, "r").readlines
   end
 
   parseCHILDESFile(file_info, corpus_metadata[metadata_file]) do  |utterance|
@@ -414,10 +416,10 @@ $result = Hash.new do |hash,key| hash[key] = Hash.new nil end
 
 $ages.each_key do |age|
   $ages[age].each_pair do |verb,count|
-    data = $verb_data[verb]    
-    $result[age][verb] = { 
-      :CHILDESCount => count.to_i, 
-      :Age => age.to_i, 
+    data = $verb_data[verb]
+    $result[age][verb] = {
+      :CHILDESCount => count.to_i,
+      :Age => age.to_i,
       :Form => data[:Form].to_s,
       :Category => data[:Category].to_s,
       :Lemma => data[:Lemma].to_s,
