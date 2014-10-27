@@ -1,0 +1,128 @@
+
+grammar Mor
+        rule mor
+           (tag_group / punctuation )+ {
+               def struct
+                 elements.map {|e| e.struct if not e.empty? and e.respond_to?(:struct)} 
+               end 
+           }
+        end
+           
+        rule punctuation
+          whitespace? punct:('.' / '?' / '!' / '+"/.' / '+...' / '+!?' / '+/.') whitespace?  {
+               def struct
+                 [[{:Type => :Punctuation, :Value => punct.text_value}]]
+               end 
+           }
+        end
+
+	rule tag_group 
+         whitespace? word_group rest_word_groups:additional_analysis* whitespace?  {
+               def struct
+                 [word_group.struct] + rest_word_groups.elements.map {|e| e.struct if not e.empty? and e.respond_to?(:struct) }
+               end 
+           }
+	end	
+
+        rule additional_analysis
+           '^' word_group  {
+               def struct
+                 word_group.struct 
+               end 
+           }
+        end
+
+        rule word_group
+           pre_clitic* (word / compound) post_clitic*  {
+               def struct
+                 pre= elements[0].elements.map {|e| e.struct if not e.empty? and e.respond_to?(:struct)}
+                 targ = [elements[1].struct]
+                 post=elements[2].elements.map {|e| e.struct if not e.empty? and e.respond_to?(:struct)}
+                 pre + targ + post
+               end 
+             }
+        end
+
+        rule pre_clitic
+            word '$' {
+              def struct
+                { :Type => :PreClitic,
+                  :Word => word.struct}
+              end 
+           }
+        end
+
+        rule post_clitic
+            '~' word  {
+              def struct
+                { :Type => :PostClitic,
+                  :Word => word.struct}
+              end 
+           }
+        end
+
+       rule compound
+         part_of_speech '+' first_word:word '+' second_word:word rest_words:additional_compound* {
+              def struct
+                { :Type => :Compound,
+                  :Pos => part_of_speech.struct,
+                  :Parts => [first_word.struct] + [second_word.struct] + rest_words.elements.map {|e| e.struct if not e.empty? and e.respond_to?(:struct)}}
+              end 
+           }
+        end
+
+        rule additional_compound
+           '+' word  {
+               def struct
+                 word.struct 
+               end 
+           }
+        end
+
+        rule word
+            prefixes:prefix* part_of_speech stem rest_suffixes:(suffix / fusionalsuffix / english)*  {
+              def struct
+                suffixes = []
+                fusionalsuffixes = []
+                english = []
+                rest_suffixes.elements.each do |e|
+                  if not e.empty? and e.respond_to?(:struct)
+                    v=e.struct
+                    case 
+                    when v.has_key?(:Suffix) then suffixes.push v[:Suffix]
+                    when v.has_key?(:FusionalSuffix) then fusionalsuffixes.push v[:FusionalSuffix]
+                    when v.has_key?(:English) then english.push v[:English]
+                    else end
+                  end  
+                end
+                
+                { :Type => :Word,
+                  :Pos => part_of_speech.struct,
+                  :Stem => stem.text_value,
+                  :Prefixes => prefixes.elements.map {|e| e.struct if not e.empty? and e.respond_to?(:struct)},
+                  :Suffixes => suffixes,
+                  :FusionalSuffixes => fusionalsuffixes,
+                  :English => english}
+               end 
+           }
+        end
+
+        rule part_of_speech
+          category subcategories:subcategory* '|' {
+               def struct
+                 {:Category => category.text_value, :SubCategories => subcategories.elements.map {|e| e.struct if not e.empty? and e.respond_to?(:struct) } }  
+              end 
+             }
+        end
+
+        rule category string end
+
+        rule subcategory ':' string  { def struct() string.text_value end } end
+        rule prefix string '#' { def struct() string.text_value end } end
+        rule suffix '-' string  { def struct() {:Suffix => string.text_value} end } end
+        rule fusionalsuffix '&' string { def struct() {:FusionalSuffix => string.text_value} end } end
+        rule english '=' string { def struct() {:English => string.text_value} end } end
+        rule stem string end
+        rule string [a-zA-Z0-9_\']+  end
+        rule whitespace [ \t]+ end
+end
