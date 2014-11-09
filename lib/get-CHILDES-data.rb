@@ -1,14 +1,16 @@
 require 'find'
 require 'sqlite3'
-require './corpus-file-info'
+# require './corpus-file-info'
+require './corpus-file-info-small' # smaller test set
 require 'set'
 require 'treetop'
 require './mor'
 require './chat'
-require 'data_reader'
+require './data_reader'
 
-CHILDES_DIRECTORY = "~/Dropbox/cs/mit/CHILDES"
-$verb_data = DataReader.hashonkeys_load('/Users/timo/Projects/fragment-grammar/Simulations/PastTense/Data/verbs-CHILDES-SWBD.csv',[:Form,:Category], :CSV)
+CHILDES_DIRECTORY = "/home/jmu303/Documents/childes.psy.cmu.edu/data"
+
+$verb_data = DataReader.hashonkeys_load('./verbs-CHILDES-SWBD.csv',[:Form,:Category], :CSV)
 
 $verbs = {}
 $verb_data.values.each do |x| $verbs[ x[:Form] ] = 1 end
@@ -86,6 +88,8 @@ class CHILDESUtteranceMetadata
       when /^@Room Layout:/ then
       when /^@Color words:/ then
       when /^@Bck:/ then
+      # Added by Jesse
+      when /^@PID:/ then
       else raise "Unknown metadata field: #{field}" end
     end
   end
@@ -186,7 +190,8 @@ class CHILDESUtterance
 
     tokens = utterance.first.split.map { |t| t.strip }
     @speaker= tokens[0].gsub(/[*:]/,"").strip
-    @raw_utterance = tokens.slice(1,:end).join(" ").gsub(/[^ ],/, " ,") #we have to make a number of fixes to the raw data to get parsing to work
+    # Get everything but first row
+    @raw_utterance = tokens.slice(1..-1).join(" ").gsub(/[^ ],/, " ,") #we have to make a number of fixes to the raw data to get parsing to work
 
     # $mismatches.puts "Parsing: #{@raw_utterance}"
     p=$chat_parser.parse(@raw_utterance)
@@ -207,7 +212,9 @@ class CHILDESUtterance
     @age_bin = @age.ceil
 
     @annotations = Hash.new nil
-    annotations = Array.new(utterance.slice(1,:end))
+    # puts "UTTERANCE BEFORE: ", utterance
+    annotations = Array.new(utterance.slice(1..-1))
+    # puts "ANNOTATIONS AFTER: ", annotations
     annotations.each do |tier|
       case tier
       when /^%mor:/ then
@@ -277,6 +284,11 @@ class CHILDESUtterance
         @annotations[:Xgrt] = tier.gsub(/%(.*?):\t/, "")
       when /^%pht:/ then
         @annotations[:Pht] = tier.gsub(/%(.*?):\t/, "")
+      # New annotations added
+      when /^%gra:/ then
+        @annotations[:Gra] = tier.gsub(/%(.*?):\t/, "")
+      when /%xpho:/ then
+        @annotations[:Xpho] = tier.gsub(/%(.*?):\t/, "")
       else raise "Unknown Tier: #{tier}"
       end
     end
@@ -321,6 +333,7 @@ def parseCHILDESFile (file_info, corpusMetadata )
     when /^@/ then
       metadata = metadata.push(field) if not field == ""
     when /^\*/ then
+      # puts last_utterance
       yield CHILDESUtterance.new(utt_num+=1,last_utterance,file_info,metadata,corpusMetadata) if not last_utterance == []
        #utterances = utterances.push()
       last_utterance = [field]
@@ -346,6 +359,7 @@ def count_words( utterance )
               fusional = get_MOR_token_fusionalsuffixes(morphology)
               suffix = get_MOR_token_suffixes(morphology)
               # mor_subcat = get_MOR_token_subcategory(morphology)
+              # puts [fusional, suffix]
               tag=case mor_cat
                   when /^v$/ then
                     case [fusional, suffix]
@@ -372,6 +386,8 @@ def count_words( utterance )
                     when ["3S", ""] then "VBZ"
                     when ["PAST|13S",""]  then "VBD" # was
                     when ["PERF",""]  then "VBN" # been
+                    when ["PASTP", ""] then "VBN" # Updated been
+                    when ["", "PRESP"] then "VBG" # -ing
                     when ["1S", ""] then "VBP" # am
                     else $stderr.puts "Don't know auxiliary type: #{suffix} for word '#{word}' with suffix '#{suffix}' and fusional '#{fusional}'" end
                   when /^part$/ then
@@ -379,14 +395,18 @@ def count_words( utterance )
                     when ["", "PERF"] then "VBN"
                     when ["", "PROG"] then "VBG"
                     when ["PERF", ""] then "VBN"
+                    # ING verbs seems to be Gerund
+                    when ["", "PRESP"] then "VBG" # -ing
+                    when ["PASTP", ""] then "VBN" # -en
+                    when ["", "PASTP"] then "VBN" # -en
                     else $stderr.puts "Don't know participle type: #{suffix} for word '#{word}' with category '#{mor_cat}' and fusional '#{fusional}'" end
                   else raise "Don't know this verbal category!!" end
 
-              if $verb_data.include?([word,tag]) then
+              if $verb_data.include?([word, tag]) then
                 # puts "#{word},#{mor_cat},#{mor_subcat},#{fusional},#{suffix}"
                 $ages[utterance.age_bin][[word, tag]] += 1
               else
-                #puts "Cannot find an entry for: (#{word}, #{tag})\n\t'#{utterance.tokenized.join(' ')}' from file: '#{utterance.file_info[:File]}' \n\tCHAT: '#{mor_cat}', '#{fusional}', '#{suffix}'"
+                # puts "Cannot find an entry for: (#{word}, #{tag})\n\t'#{utterance.tokenized.join(' ')}' from file: '#{utterance.file_info[:File]}' \n\tCHAT: '#{mor_cat}', '#{fusional}', '#{suffix}'"
               end
             end
           end
@@ -398,8 +418,7 @@ end
 
 corpus_metadata={}
 $childes_files.each do |file_info|
-  top, bottom = file_info[:Corpus].split(":")
-  metadata_file = bottom # FIXME this just silences syntax errors
+  top, _ = file_info[:Corpus].split(":")
   metadata_file = "#{CHILDES_DIRECTORY}/#{top}/0metadata.cdc"
 
   if not corpus_metadata.has_key?(metadata_file) then
@@ -430,4 +449,4 @@ $ages.each_key do |age|
   end
 end
 
-DataReader.save('/Users/timo/Projects/fragment-grammar/Simulations/PastTense/Data/CHILDES-by-ages.yaml', $result, :YAML, true )
+DataReader.save('./CHILDES-by-ages.yaml', $result, :YAML, true )
