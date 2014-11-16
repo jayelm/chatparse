@@ -1,7 +1,7 @@
 require 'find'
 require 'sqlite3'
 # require './corpus-file-info'
-require './corpus-file-info-small' # smaller test set
+require './corpus-file-info-eve-sarah'
 require 'set'
 require 'treetop'
 require './mor'
@@ -90,6 +90,7 @@ class CHILDESUtteranceMetadata
       when /^@Bck:/ then
       # Added by Jesse
       when /^@PID:/ then
+      when /^@Font:/ then  # Not needed, only in Brown/Eve
       else raise "Unknown metadata field: #{field}" end
     end
   end
@@ -181,26 +182,39 @@ end
 $tiers = Hash.new 0
 class CHILDESUtterance
   attr_accessor :num, :raw_utterance, :tokenized, :file_info, :speaker, :utterance_tokens, :annotations, :metadata, :corpus_metadata, :utterance_xml, :cleaned_utterance, :utterance_tokens, :age, :age_bin
+  # New utterance
   def initialize(num, utterance, file_info, metadata, corpusMetadata)
+    # Set metadata
     @tokenized = nil
     @num = num
     @file_info = file_info
+    # Make metadata object from Array
     @metadata = CHILDESUtteranceMetadata.new(Array.new(metadata))
+    # This is the metadata attached to the corpus file in parent directory
     @corpus_metadata = Array.new(corpusMetadata)
 
+    # print "UTTERANCE: "; puts utterance
+    # puts utterance
+    # puts
+    # puts
     tokens = utterance.first.split.map { |t| t.strip }
+    # puts utterance
+    # print "TOKENS:"; puts tokens
     @speaker= tokens[0].gsub(/[*:]/,"").strip
     # Get everything but first row
     @raw_utterance = tokens.slice(1..-1).join(" ").gsub(/[^ ],/, " ,") #we have to make a number of fixes to the raw data to get parsing to work
 
     # $mismatches.puts "Parsing: #{@raw_utterance}"
-    p=$chat_parser.parse(@raw_utterance)
+    # Parse chat format
+    p = $chat_parser.parse(@raw_utterance)
     if p == nil
       $mismatches.puts "!!!!Can't CHAT Parse: #{@raw_utterance}"
+      puts "!!!!Can't CHAT Parse: #{@raw_utterance}"
       $stdout.flush
     else
       # $mismatches.puts "Parsed:\n\t#{@raw_utterance}\n\t#{to_tree(p)}\n\t#{p.replace}"
       $stdout.flush
+      # Couple of basic replacements
       @tokenized = p.replace.gsub(/ ta /," to ").gsub(/mhm/, "yes").split.map {|t| t.strip}
     end
 
@@ -215,80 +229,90 @@ class CHILDESUtterance
     # puts "UTTERANCE BEFORE: ", utterance
     annotations = Array.new(utterance.slice(1..-1))
     # puts "ANNOTATIONS AFTER: ", annotations
+    # TODO FIXME OPTIMIZE figure out type of annotations
+    # And figure out how the annotations disappear
     annotations.each do |tier|
       case tier
-      when /^%mor:/ then
-        morph=tier.gsub(/%(.*?):\t/, "").strip
+      when /^%mor:/ # Morphemic segments by type and PoS
+        # gets rid of tab and %mor
+        morph = tier.gsub(/%(.*?):\t/, "").strip
 
-        parse=$mor_parser.parse(morph)
+        parse = $mor_parser.parse(morph)
         if parse == nil or parse == []
-        then
           $mismatches.puts "Can't MOR parse: #{annotations}"
+          puts "Can't MOR parse: #{annotations}"
           $stdout.flush
         else
-          @annotations[:Morphology]=parse.struct.map {|x| x.first}
+          @annotations[:Morphology] = parse.struct.map {|x| x.first}
+          # puts "@annotations[:Morphology]: #{@annotations[:Morphology]}"
           $stdout.flush
         end
 
-        if @tokenized then
+        if @tokenized
           if @annotations[:Morphology]
-            if (not @tokenized.length == @annotations[:Morphology].length)
-            then
+            if not @tokenized.length == @annotations[:Morphology].length
               $mismatches.puts "Tokenization and morphology don't match:\n\t#{@raw_utterance}\n\t#{@tokenized.join(' ')}\n\t#{morph}"
+              # puts "Tokenization and morphology don't match:\n\t#{@raw_utterance}\n\t#{@tokenized.join(' ')}\n\t#{morph}"
+              # puts "Morphology length: #{@annotations[:Morphology].length}"
               @annotations[:Morphology]=nil
+              # puts "Tokenization length: #{@tokenized.length}"
             else
               @tokenized.length.times do |i|
-                f=get_MOR_token_form(@annotations[:Morphology][i])
-                if f != @tokenized[i] then
+                f = get_MOR_token_form(@annotations[:Morphology][i])
+                if f != @tokenized[i]
+                  # This happens when stem is different from token
                   $mismatches.puts "Token and MOR don't match: #{@tokenized[i]}, #{f}"
+                  # puts "Token and MOR don't match: #{@tokenized[i]}, #{f}"
                 end
               end
             end
           end
         else
           $mismatches.puts "Ended up with a nil tokenization:  #{@raw_utterance}"
+          puts "Ended up with a nil tokenization:  #{@raw_utterance}"
         end
-
-
-      when /^%xgra:/ then
+      # Prefacing with x means non-standard CHAT feature
+      when /^%xgra:/  # More advanced GRA feature (not sure what though)
         @annotations[:Syntax] = tier.gsub(/%(.*?):\t/, "").split.map {|x| x.strip}
-      when /^%com:/ then
+      when /^%com:/  # General comment
         @annotations[:Com] = tier.gsub(/%(.*?):\t/, "")
-      when /^%act:/ then
+      when /^%act:/
         @annotations[:Action] = tier.gsub(/%(.*?):\t/, "")
-      when /^%int:/ then
+      when /^%int:/
         @annotations[:Intonation] = tier.gsub(/%(.*?):\t/, "")
-      when /^%exp:/ then
+      when /^%exp:/
         @annotations[:Exp] = tier.gsub(/%(.*?):\t/, "")
-      when /^%pho:/ then
+      when /^%pho:/
         @annotations[:Phonology] = tier.gsub(/%(.*?):\t/, "")
-      when /^%spa:/ then
+      when /^%spa:/
         @annotations[:Spa] = tier.gsub(/%(.*?):\t/, "")
-      when /^%par:/ then
+      when /^%par:/
         @annotations[:Par] = tier.gsub(/%(.*?):\t/, "")
-      when /^%alt:/ then
+      when /^%alt:/
         @annotations[:Alt] = tier.gsub(/%(.*?):\t/, "")
-      when /^%gpx:/ then
+      when /^%gpx:/
         @annotations[:Gpx] = tier.gsub(/%(.*?):\t/, "")
-      when /^%sit:/ then
+      when /^%sit:/
         @annotations[:Sit] = tier.gsub(/%(.*?):\t/, "")
-      when /^%add:/ then
+      when /^%add:/
         @annotations[:Add] = tier.gsub(/%(.*?):\t/, "")
-      when /^%err:/ then
+      when /^%err:/
         @annotations[:Err] = tier.gsub(/%(.*?):\t/, "")
-      when /^%eng:/ then
+      when /^%eng:/
         @annotations[:English] = tier.gsub(/%(.*?):\t/, "")
-      when /^%trn:/ then
+      when /^%trn:/
         @annotations[:Trn] = tier.gsub(/%(.*?):\t/, "")
-      when /^%xgrt:/ then
+      when /^%xgrt:/
         @annotations[:Xgrt] = tier.gsub(/%(.*?):\t/, "")
-      when /^%pht:/ then
+      when /^%pht:/
         @annotations[:Pht] = tier.gsub(/%(.*?):\t/, "")
       # New annotations added
-      when /^%gra:/ then
+      when /^%gra:/  # Standard grammatical relations tier
         @annotations[:Gra] = tier.gsub(/%(.*?):\t/, "")
-      when /%xpho:/ then
+      when /%xpho:/  # Non-standard phoneme tier
         @annotations[:Xpho] = tier.gsub(/%(.*?):\t/, "")
+      when /^%grt:/  # Standard GRT tier
+        @annotations[:grt] = tier.gsub(/%(.*?):\t/, "")
       else raise "Unknown Tier: #{tier}"
       end
     end
@@ -300,24 +324,27 @@ class CHILDESUtterance
 end # end childes utterance class
 
 
-def parseCHILDESFile (file_info, corpusMetadata )
+def parseCHILDESFile(file_info, corpusMetadata)
+  # Parses a single CHILDES file specified in corpus-file-info.rb
+
+  # Get filename from file_info hash
+  puts "Parsing file #{file_info[:File]}"
   lines = File.readlines("#{CHILDES_DIRECTORY}/#{file_info[:File]}")
 
-  #grab the file fields
+  # grab the file fields
   fields = []
   last_field = ""
   lines.each do |line|
     case line
-    when /^@/ then
+    # previously @, \*, and % were all separate fields, but that seems
+    # unecessary since the code is the same, so I joined them
+    when /^@/, #UTF8, @PID:, @Date, @Media (basically metadata)
+         /^\*/, #*CHI, *LOI, TODO find out
+         /^%/# %mor, %gra, %act TODO find out
       fields = fields.push(last_field) if not last_field == ""
       last_field = line
-    when /^\*/ then
-      fields = fields.push(last_field) if not last_field == ""
-      last_field = line
-    when /^%/ then
-      fields = fields.push(last_field) if not last_field == ""
-      last_field = line
-    when /^\t/ then
+    when /^\t/ then # Some lines are tabbed in, line continuation
+      # This just makes sure line continuations are good to go
       last_field += line
     else raise "*****Don't know how to handle line! : #{line}" end
   end
@@ -326,41 +353,62 @@ def parseCHILDESFile (file_info, corpusMetadata )
   utterances = []
   metadata = []
   last_utterance = []
-  fields.each do |field|
-    field.gsub!(/[\n]/," ")
 
+  fields.each do |field|
+    # Get rid of line break
+    field.gsub!(/[\n]/," ")
     case field
-    when /^@/ then
+    when /^@/ then # Yep, this is metadata @PID, @Comment, etc - add to metadata file
       metadata = metadata.push(field) if not field == ""
-    when /^\*/ then
-      # puts last_utterance
-      yield CHILDESUtterance.new(utt_num+=1,last_utterance,file_info,metadata,corpusMetadata) if not last_utterance == []
-       #utterances = utterances.push()
+    when /^\*/ then # These are Utterances *CHI, *PAT, etc
+      if not last_utterance == []  # If we have a last utterance, this
+        # Invokes the block attached to this function
+        # Specifically, just count_words (446)
+        yield CHILDESUtterance.new(utt_num+=1,
+                                   last_utterance,
+                                   file_info,
+                                   metadata,
+                                   corpusMetadata)
+      end
+      # Initialize our last utterance - so * marks beginning of utterances
       last_utterance = [field]
-    when /^%/ then
+    when /^%/ then # Add to our last_utterance Array
       last_utterance = last_utterance.push(field)
     else raise "*****Don't know how to handle field! : #{field}" end
-
   end
+  # This isn't actually used
   return utterances
 end
 
-def count_words( utterance )
+def count_words(utterance)
+  # puts utterance
   if utterance.tokenized
     if utterance.annotations[:Morphology]
       # I parenthesized the entire thing between not and then, not sure if correct
-      if not (/(Target_Child|Child|Playmate|Non_Human|Environment|Camera_Operator)/ =~ utterance.metadata.participants[utterance.speaker][:Role]) then
+      # Must not be any of these speakers
+      if not (/(Target_Child|Child|Playmate|Non_Human|Environment|Camera_Operator)/ =~ utterance.metadata.participants[utterance.speaker][:Role])
         if 18.0 <= utterance.age and utterance.age <= 60.0
+          # For every token...
           utterance.tokenized.length.times do |index|
             word = utterance.tokenized[index]
-            morphology=utterance.annotations[:Morphology][index]
+            # Get the morphology of the word
+            morphology = utterance.annotations[:Morphology][index]
+            # Get morphology token of the word
             mor_cat = get_MOR_token_category(morphology)
-            if /^(v|aux|part)$/ =~ mor_cat
+            if /^(v|aux|part)$/ =~ mor_cat # If a verb, aux, or participle
+              # Get fusional suffix from .tt grammar parse
               fusional = get_MOR_token_fusionalsuffixes(morphology)
+              # same as above
               suffix = get_MOR_token_suffixes(morphology)
               # mor_subcat = get_MOR_token_subcategory(morphology)
+              # puts "[fusional, suffix]"
               # puts [fusional, suffix]
+              # puts "mor_cat"
+              # puts mor_cat
               tag=case mor_cat
+                    # FIXME: This v does not always mean verb, as evidenced
+                    # by the very large amount of "Cannot find an entry for...
+                    # With words like bed, interesting, box, page, etc
                   when /^v$/ then
                     case [fusional, suffix]
                     when ["","PAST"] then "VBD" # regulars
@@ -386,6 +434,7 @@ def count_words( utterance )
                     when ["3S", ""] then "VBZ"
                     when ["PAST|13S",""]  then "VBD" # was
                     when ["PERF",""]  then "VBN" # been
+                    # Updated by Jesse
                     when ["PASTP", ""] then "VBN" # Updated been
                     when ["", "PRESP"] then "VBG" # -ing
                     when ["1S", ""] then "VBP" # am
@@ -396,6 +445,7 @@ def count_words( utterance )
                     when ["", "PROG"] then "VBG"
                     when ["PERF", ""] then "VBN"
                     # ING verbs seems to be Gerund
+                    # Updated by Jesse
                     when ["", "PRESP"] then "VBG" # -ing
                     when ["PASTP", ""] then "VBN" # -en
                     when ["", "PASTP"] then "VBN" # -en
@@ -406,6 +456,8 @@ def count_words( utterance )
                 # puts "#{word},#{mor_cat},#{mor_subcat},#{fusional},#{suffix}"
                 $ages[utterance.age_bin][[word, tag]] += 1
               else
+                $stderr.puts "Cannot find an entry for: (#{word}, #{tag})\n\t'#{utterance.tokenized.join(' ')}' from file: '#{utterance.file_info[:File]}' \n\tmor_cat: '#{mor_cat}', fusional: '#{fusional}', suffix: '#{suffix}'"
+                puts morphology
                 # puts "Cannot find an entry for: (#{word}, #{tag})\n\t'#{utterance.tokenized.join(' ')}' from file: '#{utterance.file_info[:File]}' \n\tCHAT: '#{mor_cat}', '#{fusional}', '#{suffix}'"
               end
             end
@@ -417,12 +469,24 @@ def count_words( utterance )
 end
 
 corpus_metadata={}
+# For each file specified in corpus-file-info.rb
 $childes_files.each do |file_info|
+  # File_info is an array of hashes, each specifying one .cha file
+  # We parse each file individually
+
+  # Bloom70:Peter
+  # Top becomes Bloom70
   top, _ = file_info[:Corpus].split(":")
+  # There needs to be a metadata file.
+  # Top is corpus folder, CHILDES_DIRECTORY specified up top
   metadata_file = "#{CHILDES_DIRECTORY}/#{top}/0metadata.cdc"
 
+  # If the metadata, and thus corpus, hasn't been processed yet
   if not corpus_metadata.has_key?(metadata_file) then
+    # Only prints if it's the first file in the corpus being parsed
     $stderr.puts "Processing Corpus: #{file_info[:Corpus]}"
+    # Read the contents of the metadatfile as a value for the corpus_metadata hash
+    # file name is key
     corpus_metadata[metadata_file] = File.new(metadata_file, "r").readlines
   end
 
