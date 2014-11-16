@@ -48,26 +48,26 @@
 #Warren
 # Josh says not to use for Past Tense!
 
-$bloom70 = [ {:File=>"Bloom70/Peter/peter01.cha", :Child=>"Peter", :Corpus=>"Bloom70:Peter", :Years=>1, :Months=>9.7},
-                  {:File=>"Bloom70/Peter/peter02.cha", :Child=>"Peter", :Corpus=>"Bloom70:Peter", :Years=>1, :Months=>9.21},
-                  {:File=>"Bloom70/Peter/peter03.cha", :Child=>"Peter", :Corpus=>"Bloom70:Peter", :Years=>1, :Months=>10.15},
-                  {:File=>"Bloom70/Peter/peter04.cha", :Child=>"Peter", :Corpus=>"Bloom70:Peter", :Years=>1, :Months=>11.7},
-                  {:File=>"Bloom70/Peter/peter05.cha", :Child=>"Peter", :Corpus=>"Bloom70:Peter", :Years=>1, :Months=>11.21},
-                  {:File=>"Bloom70/Peter/peter06.cha", :Child=>"Peter", :Corpus=>"Bloom70:Peter", :Years=>2, :Months=>0.7},
-                  {:File=>"Bloom70/Peter/peter07.cha", :Child=>"Peter", :Corpus=>"Bloom70:Peter", :Years=>2, :Months=>0.7},
-                  {:File=>"Bloom70/Peter/peter08.cha", :Child=>"Peter", :Corpus=>"Bloom70:Peter", :Years=>2, :Months=>1.21},
-                  {:File=>"Bloom70/Peter/peter09.cha", :Child=>"Peter", :Corpus=>"Bloom70:Peter", :Years=>2, :Months=>2.14},
-                  {:File=>"Bloom70/Peter/peter10.cha", :Child=>"Peter", :Corpus=>"Bloom70:Peter", :Years=>2, :Months=>3.0},
-                  {:File=>"Bloom70/Peter/peter11.cha", :Child=>"Peter", :Corpus=>"Bloom70:Peter", :Years=>2, :Months=>3.21},
-                  {:File=>"Bloom70/Peter/peter12.cha", :Child=>"Peter", :Corpus=>"Bloom70:Peter", :Years=>2, :Months=>4.14},
-                  {:File=>"Bloom70/Peter/peter13.cha", :Child=>"Peter", :Corpus=>"Bloom70:Peter", :Years=>2, :Months=>5.0},
-                  {:File=>"Bloom70/Peter/peter14.cha", :Child=>"Peter", :Corpus=>"Bloom70:Peter", :Years=>2, :Months=>5.21},
-                  {:File=>"Bloom70/Peter/peter15.cha", :Child=>"Peter", :Corpus=>"Bloom70:Peter", :Years=>2, :Months=>6.14},
-                  {:File=>"Bloom70/Peter/peter16.cha", :Child=>"Peter", :Corpus=>"Bloom70:Peter", :Years=>2, :Months=>7.14},
-                  {:File=>"Bloom70/Peter/peter17.cha", :Child=>"Peter", :Corpus=>"Bloom70:Peter", :Years=>2, :Months=>8.14},
-                  {:File=>"Bloom70/Peter/peter18.cha", :Child=>"Peter", :Corpus=>"Bloom70:Peter", :Years=>2, :Months=>9.14},
-                  {:File=>"Bloom70/Peter/peter19.cha", :Child=>"Peter", :Corpus=>"Bloom70:Peter", :Years=>2, :Months=>10.21},
-                  {:File=>"Bloom70/Peter/peter20.cha", :Child=>"Peter", :Corpus=>"Bloom70:Peter", :Years=>3, :Months=>1.21}]
+$bloom70 = [ {:File=>"Bloom70/Peter/01.cha", :Child=>"Peter", :Corpus=>"Bloom70:Peter", :Years=>1, :Months=>9.7},
+                  {:File=>"Bloom70/Peter/02.cha", :Child=>"Peter", :Corpus=>"Bloom70:Peter", :Years=>1, :Months=>9.21},
+                  {:File=>"Bloom70/Peter/03.cha", :Child=>"Peter", :Corpus=>"Bloom70:Peter", :Years=>1, :Months=>10.15},
+                  {:File=>"Bloom70/Peter/04.cha", :Child=>"Peter", :Corpus=>"Bloom70:Peter", :Years=>1, :Months=>11.7},
+                  {:File=>"Bloom70/Peter/05.cha", :Child=>"Peter", :Corpus=>"Bloom70:Peter", :Years=>1, :Months=>11.21},
+                  {:File=>"Bloom70/Peter/06.cha", :Child=>"Peter", :Corpus=>"Bloom70:Peter", :Years=>2, :Months=>0.7},
+                  {:File=>"Bloom70/Peter/07.cha", :Child=>"Peter", :Corpus=>"Bloom70:Peter", :Years=>2, :Months=>0.7},
+                  {:File=>"Bloom70/Peter/08.cha", :Child=>"Peter", :Corpus=>"Bloom70:Peter", :Years=>2, :Months=>1.21},
+                  {:File=>"Bloom70/Peter/09.cha", :Child=>"Peter", :Corpus=>"Bloom70:Peter", :Years=>2, :Months=>2.14},
+                  {:File=>"Bloom70/Peter/10.cha", :Child=>"Peter", :Corpus=>"Bloom70:Peter", :Years=>2, :Months=>3.0},
+                  {:File=>"Bloom70/Peter/11.cha", :Child=>"Peter", :Corpus=>"Bloom70:Peter", :Years=>2, :Months=>3.21},
+                  {:File=>"Bloom70/Peter/12.cha", :Child=>"Peter", :Corpus=>"Bloom70:Peter", :Years=>2, :Months=>4.14},
+                  {:File=>"Bloom70/Peter/13.cha", :Child=>"Peter", :Corpus=>"Bloom70:Peter", :Years=>2, :Months=>5.0},
+                  {:File=>"Bloom70/Peter/14.cha", :Child=>"Peter", :Corpus=>"Bloom70:Peter", :Years=>2, :Months=>5.21},
+                  {:File=>"Bloom70/Peter/15.cha", :Child=>"Peter", :Corpus=>"Bloom70:Peter", :Years=>2, :Months=>6.14},
+                  {:File=>"Bloom70/Peter/16.cha", :Child=>"Peter", :Corpus=>"Bloom70:Peter", :Years=>2, :Months=>7.14},
+                  {:File=>"Bloom70/Peter/17.cha", :Child=>"Peter", :Corpus=>"Bloom70:Peter", :Years=>2, :Months=>8.14},
+                  {:File=>"Bloom70/Peter/18.cha", :Child=>"Peter", :Corpus=>"Bloom70:Peter", :Years=>2, :Months=>9.14},
+                  {:File=>"Bloom70/Peter/19.cha", :Child=>"Peter", :Corpus=>"Bloom70:Peter", :Years=>2, :Months=>10.21},
+                  {:File=>"Bloom70/Peter/20.cha", :Child=>"Peter", :Corpus=>"Bloom70:Peter", :Years=>3, :Months=>1.21}]
 
 $bloom73 = [{:File=>"Bloom73/allison1.cha", :Child=>"Allison", :Corpus=>"Bloom73",:Years=>1, :Months=>4.21},
             {:File=>"Bloom73/allison2.cha", :Child=>"Allison", :Corpus=>"Bloom73",:Years=>1, :Months=>7.14},
@@ -1430,7 +1430,8 @@ $weist = [{:File=>"Weist/emi01.cha", :Child=>"Emily", :Corpus=>"Weist", :Years=>
                   {:File=>"Weist/rom41.cha", :Child=>"Roman", :Corpus=>"Weist", :Years=>4, :Months=>6.11},
                   {:File=>"Weist/rom42.cha", :Child=>"Roman", :Corpus=>"Weist", :Years=>4, :Months=>7.20}]
 
-$childes_files = $bloom70 + $bloom73 + $brown + $clark + $demetras1 + $gleason + $higginson + $kuczaj + $nelson +  $providence + $sachs + $snow + $suppes + $weist
+# TODO Jesse Mu: No Nelson for now, at least - most of the files in that corpus have been removed ($nelson)
+$childes_files = $bloom70 + $bloom73 + $brown + $clark + $demetras1 + $gleason + $higginson + $kuczaj +  $providence + $sachs + $snow + $suppes + $weist
 #$childes_files =  $brown + $gleason + $kuczaj + $providence
 #$childes_files =  $brown + $kuczaj + $providence
 #$childes_files =   $kuczaj 
