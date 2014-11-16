@@ -32,3 +32,7 @@ build/
 
 # unless supporting rvm < 1.11.0 or doing something fancy, ignore this:
 .rvmrc
+
+# We probably don't need all 20MB+ of the mismatches error file, I can examine
+# that myself
+/lib/mismatches.txt
