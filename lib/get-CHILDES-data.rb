@@ -1,7 +1,7 @@
 require 'find'
 require 'sqlite3'
 # require './corpus-file-info'
-require './corpus-file-info-eve-sarah'
+require './corpus-file-info-small'
 require 'set'
 require 'treetop'
 require './mor'
@@ -319,7 +319,7 @@ class CHILDESUtterance
   end
 
   def to_s
-    "Utterance: #{@utterance.inspect}" + "\nFile: #{@file.inspect}" + "\nMetaData: #{@metadata.inspect}" + "\nCorpus: #{@corpus.inspect}" + "\nCorpusMetaData: #{@corpusMetadata.inspect}\n"
+    "Utterance: #{@utterance.inspect}" + "\nFile: #{@file.inspect}" + "\nMetaData: #{@metadata.inspect}" + "\nCorpus: #{@corpus.inspect}" + "\nCorpusMetaData: #{@corpus_metadata.inspect}\n"
   end
 end # end childes utterance class
 
@@ -364,11 +364,11 @@ def parseCHILDESFile(file_info, corpusMetadata)
       if not last_utterance == []  # If we have a last utterance, this
         # Invokes the block attached to this function
         # Specifically, just count_words (446)
-        yield CHILDESUtterance.new(utt_num+=1,
+        utterances.push(CHILDESUtterance.new(utt_num+=1,
                                    last_utterance,
                                    file_info,
                                    metadata,
-                                   corpusMetadata)
+                                   corpusMetadata))
       end
       # Initialize our last utterance - so * marks beginning of utterances
       last_utterance = [field]
@@ -454,6 +454,7 @@ def count_words(utterance)
 
               if $verb_data.include?([word, tag]) then
                 # puts "#{word},#{mor_cat},#{mor_subcat},#{fusional},#{suffix}"
+                # Add one utterance count
                 $ages[utterance.age_bin][[word, tag]] += 1
               else
                 $stderr.puts "Cannot find an entry for: (#{word}, #{tag})\n\t'#{utterance.tokenized.join(' ')}' from file: '#{utterance.file_info[:File]}' \n\tmor_cat: '#{mor_cat}', fusional: '#{fusional}', suffix: '#{suffix}'"
@@ -485,32 +486,48 @@ $childes_files.each do |file_info|
   if not corpus_metadata.has_key?(metadata_file) then
     # Only prints if it's the first file in the corpus being parsed
     $stderr.puts "Processing Corpus: #{file_info[:Corpus]}"
-    # Read the contents of the metadatfile as a value for the corpus_metadata hash
+    # Read the contents of the metadata file as a value for the corpus_metadata hash
     # file name is key
     corpus_metadata[metadata_file] = File.new(metadata_file, "r").readlines
+    puts "ASDFASDFADF"
+    puts corpus_metadata
   end
 
-  parseCHILDESFile(file_info, corpus_metadata[metadata_file]) do  |utterance|
-        count_words utterance
-  end
+  $utterances = parseCHILDESFile(file_info, corpus_metadata[metadata_file])
+
+  # utterances.each { |u| puts u.inspect }
+
+  # This is dependent on the behavior we want
+  # words_to_YAML(utterances, './CHILDES-by-ages.yaml')
 end
 
-$result = Hash.new do |hash,key| hash[key] = Hash.new nil end
-
-$ages.each_key do |age|
-  $ages[age].each_pair do |verb,count|
-    data = $verb_data[verb]
-    $result[age][verb] = {
-      :CHILDESCount => count.to_i,
-      :Age => age.to_i,
-      :Form => data[:Form].to_s,
-      :Category => data[:Category].to_s,
-      :Lemma => data[:Lemma].to_s,
-      :StemTransform => data[:StemTransform].to_s,
-      :Suffix => data[:Suffix].to_s,
-      :CELEXFrequency => data[:CELEXFrequency].to_i,
-      :PTBFrequency => data[:PTBFrequency].to_i}
+def words_to_YAML(utterances, filename)
+  $result = Hash.new do |hash, key|
+    hash[key] = Hash.new nil
   end
+
+  $ages.each_key do |age|
+    $ages[age].each_pair do |verb,count|
+      data = $verb_data[verb]
+      $result[age][verb] = {
+        :CHILDESCount => count.to_i,
+        :Age => age.to_i,
+        :Form => data[:Form].to_s,
+        :Category => data[:Category].to_s,
+        :Lemma => data[:Lemma].to_s,
+        :StemTransform => data[:StemTransform].to_s,
+        :Suffix => data[:Suffix].to_s,
+        :CELEXFrequency => data[:CELEXFrequency].to_i,
+        :PTBFrequency => data[:PTBFrequency].to_i}
+    end
+  end
+
+  DataReader.save(filename, $result, :YAML, true )
 end
 
-DataReader.save('./CHILDES-by-ages.yaml', $result, :YAML, true )
+def transcribe(utterances, filename)
+  puts utterances
+end
+
+transcribe($utterances, './CHILDES-by-ages.yaml')
+# words_to_YAML($utterances, './CHILDES-by-ages.yaml')
