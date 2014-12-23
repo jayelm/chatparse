@@ -500,8 +500,6 @@ $childes_files.each do |file_info|
     # Read the contents of the metadata file as a value for the corpus_metadata hash
     # file name is key
     corpus_metadata[metadata_file] = File.new(metadata_file, "r").readlines
-    puts "ASDFASDFADF"
-    puts corpus_metadata
   end
 
   $utterances = parseCHILDESFile(file_info, corpus_metadata[metadata_file])
