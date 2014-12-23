@@ -94,6 +94,17 @@ class CHILDESUtteranceMetadata
       else raise "Unknown metadata field: #{field}" end
     end
   end
+
+  def to_a
+    a = []
+    # Hash of instance variables
+    vars = Hash[instance_variables.map { |name| [name, instance_variable_get(name)] } ]
+    vars.each do |k, v|
+      # FIXME do we just leave symbol keys alone?
+      a.push({k.to_s => v})
+    end
+    return a
+  end
 end
 
 def get_MOR_token_form(word_group)
@@ -526,7 +537,45 @@ def words_to_YAML(utterances, filename)
 end
 
 def transcribe(utterances, filename)
-  puts utterances
+  # Set up metadata
+  trans = []
+  metadata = utterances[0].metadata.to_a
+  trans.push({"metadata" => metadata})
+  puts trans
+  utterances.each do |u|
+    # Utterance parse!
+    # 1:
+    #   *CHI: ASDF
+    #   %mor: ASDF
+    #   %gra: ASDF
+    # 2:
+    #   *CHI: ASDF
+    #   %mor: ASDF
+    #   ASDF:
+    #
+    # Or maybe...
+    # "play checkers .":
+    #   speaker: *CHI
+    #   %mor: asdf
+    #   %gra: asdf
+    #   %xpho: asdf
+    # "big drum .":
+    #   speaker: ASDf
+    #   %mor: asdf
+    #   %gra: asdf
+    #   %xpho: asdf
+    # Or use metadata/utterances division first, i.e.
+    # metadata:
+    #   - @UTF8
+    #   - random
+    #   - random
+    # utterances:
+    #   1:
+    #     *CHI: ASDF
+    #   2:
+    #     *CHI: ASDF
+  end
+  # DataReader.save(filename, trans, :YAML, true)
 end
 
 transcribe($utterances, './CHILDES-by-ages.yaml')
