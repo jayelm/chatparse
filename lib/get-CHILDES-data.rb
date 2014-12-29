@@ -338,6 +338,17 @@ class CHILDESUtterance
   def to_s
     "Utterance: #{@utterance.inspect}" + "\nFile: #{@file.inspect}" + "\nMetaData: #{@metadata.inspect}" + "\nCorpus: #{@corpus.inspect}" + "\nCorpusMetaData: #{@corpus_metadata.inspect}\n"
   end
+
+  def to_h
+    # Convert to a hash for data serialization
+    {
+      speaker: @speaker,
+      raw: @raw_utterance,
+      tokenized: @tokenized,
+      annotations: @annotations,
+      num: @num
+    }
+  end
 end # end childes utterance class
 
 
@@ -542,44 +553,11 @@ end
 
 def transcribe(utterances, filename)
   # Set up metadata
-  trans = []
-  metadata = utterances[0].metadata.to_a
-  trans.push({"metadata" => metadata})
-  puts trans
-  utterances.each do |u|
-    # Utterance parse!
-    # 1:
-    #   *CHI: ASDF
-    #   %mor: ASDF
-    #   %gra: ASDF
-    # 2:
-    #   *CHI: ASDF
-    #   %mor: ASDF
-    #   ASDF:
-    #
-    # Or maybe...
-    # "play checkers .":
-    #   speaker: *CHI
-    #   %mor: asdf
-    #   %gra: asdf
-    #   %xpho: asdf
-    # "big drum .":
-    #   speaker: ASDf
-    #   %mor: asdf
-    #   %gra: asdf
-    #   %xpho: asdf
-    # Or use metadata/utterances division first, i.e.
-    # metadata:
-    #   - @UTF8
-    #   - random
-    #   - random
-    # utterances:
-    #   1:
-    #     *CHI: ASDF
-    #   2:
-    #     *CHI: ASDF
-  end
-  # DataReader.save(filename, trans, :YAML, true)
+  trans = {
+    metadata: utterances[0].metadata.to_a,
+    utterances: utterances.collect {|u| u.to_h}
+  }
+  puts YAML.dump(trans)
 end
 
 transcribe($utterances, './CHILDES-by-ages.yaml')
