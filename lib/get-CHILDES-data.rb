@@ -101,10 +101,16 @@ class CHILDESUtteranceMetadata
     vars = Hash[instance_variables.map { |name| [name, instance_variable_get(name)] } ]
     vars.each do |k, v|
       # FIXME do we just leave symbol keys alone?
-      a.push({k.to_s => v})
+      a.push({k => v})
     end
-    return a
   end
+end
+
+def symbols_to_strings(hash)
+  # Convert a possibly nested hash's keys to strings if not already.
+  # Done here because I'm not sure if extending Hash is bad practice.
+  return hash.to_s if not hash.is_a?(Hash) or hash.is_a?(Array)
+  hash.each_with_object({}){|(k,v), h| h[k.to_s] = symbols_to_strings(v)}
 end
 
 def get_MOR_token_form(word_group)
