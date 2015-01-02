@@ -23,14 +23,12 @@ def to_tree(sn)
   # puts sn.struct.inspect if sn.respond_to?(:struct)
   if sn.terminal?
     sn.text_value
+  elsif sn.elements.all?(&:terminal?)
+    (sn.elements.map(&text_value)).join('')
   else
-    if sn.elements.all?(&:terminal?)
-      (sn.elements.map(&text_value)).join('')
-    else
-      extensions = sn.extension_modules[0].to_s.sub(/.*::/, '')
-      elements = sn.elements.map { |x| to_tree(x) unless x.empty? }.join(' ')
-      "(#{extensions} #{elements})"
-    end
+    extensions = sn.extension_modules[0].to_s.sub(/.*::/, '')
+    elements = sn.elements.map { |x| to_tree(x) unless x.empty? }.join(' ')
+    "(#{extensions} #{elements})"
   end
 end
 
