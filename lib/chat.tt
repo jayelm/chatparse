@@ -1,65 +1,64 @@
-
 grammar Chat
         rule chat
-           (repeat / 
+           (repeat /
 	    description /
-            quote / 
-            repair / 
-            angle_replacement / 
-            special_replacement / 
-            chat_token / 
+            quote /
+            repair /
+            angle_replacement /
+            special_replacement /
+            chat_token /
             whitespace )+ {
               def replace
                 elements.map do |e|  if not e.empty? then
                                        if e.respond_to?(:replace) then
                                          e.replace
                                        else e.text_value end end end.join('')
-              end 
+              end
             }
           end
 
-       rule repeat 
+       rule repeat
         '[x' [^\]]+ ']' {
             def replace
               ''
-            end 
+            end
           }
-        end  
-        
-       rule description 
+        end
+
+       rule description
         '[' ('=' / '%') [^\]]+ ']' {
             def replace
               ''
-            end 
+            end
           }
-        end  
+        end
 
-	rule left_overlap 
+	rule left_overlap
           ( (('<' content:([^>]+) '>' ) whitespace '[<]') /
             (content:([^ \t]+) whitespace '[<]') ) {
                def replace
                    content.text_value
-               end 
+               end
           }
-        end   
+        end
 
-	rule right_overlap 
+	rule right_overlap
           ( ( '[>]' whitespace ('<' content:([^>]+) '>' )  ) /
             ( '[>]' whitespace content:([^ \t]+)  ) ) {
                def replace
                    content.text_value
-               end 
+               end
           }
-        end   
+        end
 
        rule quote
           ( (('<' [^>]+ '>' ) whitespace '["]')  /
             ([^ \t]+ whitespace '["]')  ) {
                def replace
                    '"'
-               end 
+               end
           }
-        end 
+        end
 
         rule repair
           ( (('<' [^>]+ '>' ) whitespace '[/]') /
@@ -68,60 +67,56 @@ grammar Chat
             ([^ \t]+ whitespace '[//]') ) {
                def replace
                    ''
-               end 
+               end
           }
-        end            
-  
+        end
+
         rule special_replacement
           chat_token whitespace '[:' replacement:chat ']' {
               def replace
                 replacement.replace
-              end 
+              end
             }
-        end  
- 
-      
+        end
 
         rule angle_replacement
           '<'  replacement:chat '>' {
               def replace
                 replacement.replace
-              end 
+              end
             }
         end
 
-        #this represents a chat token with no spaces  
+        # This represents a chat token with no spaces.
         rule chat_token
           ( ampersand /
             at_sign /
             other /
-            plus_plus /	    	  
+            plus_plus /
             plus_comma /
             zero /
             colon /
-            brackets / 
-            parentheses / 
+            brackets /
+            parentheses /
             token )+ {
               def replace
                 elements.map do |e|  if not e.empty? then
                                        if e.respond_to?(:replace) then
                                          e.replace
                                        else e.text_value end end end.join('')
-              end 
+              end
             }
         end
 
         rule brackets
             delete_brackets  / replace_brackets
         end
-   
-	
 
         rule delete_brackets
            ( '[*]' / '[!!]' / '[!]' / '[/]' / '[>]' / '[<]' / '[?]' )  {
             def replace
               ''
-            end 
+            end
           }
         end
 
@@ -132,21 +127,21 @@ grammar Chat
                                        if e.respond_to?(:replace) then
                                          e.replace
                                        else e.text_value end end end.join('')
-              end 
+              end
             }
         end
 
         rule parentheses
-          delete_parentheses / replace_parentheses 
+          delete_parentheses / replace_parentheses
         end
 
         rule delete_parentheses
            ( '(.)' / '(..)' ) {
             def replace
               ''
-            end 
+            end
           }
-        end   
+        end
 
         rule replace_parentheses
               '('  replacement:([^\)])+ ')'  {
@@ -155,7 +150,7 @@ grammar Chat
                                        if e.respond_to?(:replace) then
                                          e.replace
                                        else e.text_value end end end.join('')
-              end 
+              end
             }
         end
 
@@ -163,47 +158,47 @@ grammar Chat
         '&' [^ \t@\[\]\(\)<>&]+ {
             def replace
               ''
-            end 
+            end
           }
-        end 
+        end
 
         rule at_sign
         '@' [^ \t@\[\]\(\)<>&]+ {
             def replace
               ''
-            end 
+            end
           }
-        end      
- 
+        end
+
         rule colon
         ':' {
           def replace
             ''
-          end 
+          end
         }
-        end  
+        end
 
         rule zero
         '0' {
           def replace
             ''
-          end 
+          end
         }
-        end       
+        end
 
         rule plus_comma
         '+,' {
           def replace
             ''
-          end 
+          end
         }
-        end  
-  
+        end
+
         rule other
         '+"' !'/.' {
           def replace
             ''
-          end 
+          end
         }
         end
 
@@ -211,10 +206,9 @@ grammar Chat
             '++' {
           def replace
             ''
-          end 
+          end
         }
-        end  
-   
+        end
 
        rule token [^ \t@\[\]\(\)<>:&0]+ { def replace() text_value end } end
        rule whitespace [ \t]+ { def replace() text_value end } end
