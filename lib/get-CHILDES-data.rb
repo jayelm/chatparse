@@ -1,7 +1,6 @@
 require 'find'
 require 'sqlite3'
-# require './corpus-file-info'
-require './corpus-file-info-small'
+require './corpus_info'
 require 'set'
 require 'treetop'
 require './mor'
@@ -10,14 +9,19 @@ require './data_reader'
 
 CHILDES_DIRECTORY = '/home/jmu303/Documents/childes.psy.cmu.edu/data'
 
-$verb_data = DataReader.hashonkeys_load('./verbs-CHILDES-SWBD.csv',[:Form,:Category], :CSV)
+VERB_DATA = DataReader.hashonkeys_load(
+  './verbs-CHILDES-SWBD.csv', [:Form, :Category], :CSV
+)
 
-$verbs = {}
-$verb_data.values.each { |x| $verbs[x[:Form]] = 1 }
+VERBS = {}
+VERB_DATA.values.each { |x| VERBS[x[:Form]] = 1 }
 
-$ages = Hash.new { |hash, key| hash[key] = Hash.new 0 }
+AGES = Hash.new { |hash, key| hash[key] = Hash.new 0 }
 
-$mismatches = File.open("mismatches.txt", 'w')
+MISMATCHES = File.open('mismatches.txt', 'w')
+
+MOR_PARSER = MorParser.new
+CHAT_PARSER = ChatParser.new
 
 def to_tree(sn)
   # puts sn.struct.inspect if sn.respond_to?(:struct)
@@ -31,9 +35,6 @@ def to_tree(sn)
     "(#{extensions} #{elements})"
   end
 end
-
-$mor_parser = MorParser.new
-$chat_parser = ChatParser.new
 
 # Metadata for a CHILDES Utterance that contains information about the
 # entire file.
@@ -229,8 +230,6 @@ def get_MOR_token_suffixes(word_group)
   end).join('-')
 end
 
-$tiers = Hash.new 0
-
 # Base CHILDES Utterance class, including instance attributes such
 # as the raw utterance, tokenized forms, parsed morphologies, and more.
 class CHILDESUtterance
@@ -257,9 +256,9 @@ class CHILDESUtterance
     @raw_utterance = tokens.slice(1..-1).join(' ').gsub(/[^ ],/, ' ,')
 
     # Parse chat format
-    p = $chat_parser.parse(@raw_utterance)
+    p = CHAT_PARSER.parse(@raw_utterance)
     if p.nil?
-      $mismatches.puts "!!!!Can't CHAT Parse: #{@raw_utterance}"
+      MISMATCHES.puts "!!!!Can't CHAT Parse: #{@raw_utterance}"
       puts "!!!!Can't CHAT Parse: #{@raw_utterance}"
       $stdout.flush
     else
@@ -282,9 +281,9 @@ class CHILDESUtterance
         # gets rid of tab and %mor
         morph = tier.gsub(/%(.*?):\t/, '').strip
 
-        parse = $mor_parser.parse(morph)
-        if parse == nil or parse == []
-          $mismatches.puts "Can't MOR parse: #{annotations}"
+        parse = MOR_PARSER.parse(morph)
+        if parse.nil? || parse == []
+          MISMATCHES.puts "Can't MOR parse: #{annotations}"
           puts "Can't MOR parse: #{annotations}"
           $stdout.flush
         else
@@ -293,34 +292,32 @@ class CHILDESUtterance
           $stdout.flush
         end
 
-        if @tokenized
-          if @annotations[:Morphology]
-            # FIXME: Avoid 3+ levels of block nesting
-            if @tokenized.length != @annotations[:Morphology].length
-              $mismatches.puts "Tokenization and morphology don't match:"
-              $mismatches.puts "\t#{@raw_utterance}"
-              $mismatches.puts "\t#{@tokenized.join(' ')}"
-              $mismatches.puts "\t#{morph}"
-              # puts "Tokenization and morphology don't match:"
-              # puts "\t#{@raw_utterance}"
-              # puts "\t#{@tokenized.join(' ')}"
-              # puts "\t#{morph}"
-              @annotations[:Morphology] = nil
-            else
-              @tokenized.length.times do |i|
-                f = get_MOR_token_form(@annotations[:Morphology][i])
-                next if f != @tokenized[i]
-                # This happens when stem is different from token
-                $mismatches.puts "Token and MOR don't match:"
-                $mismatches.puts "\t#{@tokenized[i]}, #{f}"
-                # puts "Token and MOR don't match: #{@tokenized[i]}, #{f}"
-              end
+        if @tokenized && @annotations[:Morphology]
+          # FIXME: Avoid 3+ levels of block nesting
+          if @tokenized.length != @annotations[:Morphology].length
+            MISMATCHES.puts "Tokenization and morphology don't match:"
+            MISMATCHES.puts "\t#{@raw_utterance}"
+            MISMATCHES.puts "\t#{@tokenized.join(' ')}"
+            MISMATCHES.puts "\t#{morph}"
+            # puts "Tokenization and morphology don't match:"
+            # puts "\t#{@raw_utterance}"
+            # puts "\t#{@tokenized.join(' ')}"
+            # puts "\t#{morph}"
+            @annotations[:Morphology] = nil
+          else
+            @tokenized.length.times do |i|
+              f = get_MOR_token_form(@annotations[:Morphology][i])
+              next if f != @tokenized[i]
+              # This happens when stem is different from token
+              MISMATCHES.puts "Token and MOR don't match:"
+              MISMATCHES.puts "\t#{@tokenized[i]}, #{f}"
+              # puts "Token and MOR don't match: #{@tokenized[i]}, #{f}"
             end
           end
         else
           fail "Nil tokenization: #{@raw_utterance}"
           # TODO: We're failing for now, not sure if this should happen at all
-          # $mismatches.puts "Nil tokenization: #{@raw_utterance}"
+          # MISMATCHES.puts "Nil tokenization: #{@raw_utterance}"
           # puts "Nil tokenization: #{@raw_utterance}"
         end
       # Prefacing with x means non-standard CHAT feature
@@ -541,10 +538,10 @@ def count_words(utterance)
             end
           else fail "Don't know this verbal category!!" end
 
-    if $verb_data.include?([word, tag])
+    if VERB_DATA.include?([word, tag])
       # puts "#{word},#{mor_cat},#{mor_subcat},#{fusional},#{suffix}"
       # Add one utterance count
-      $ages[utterance.age_bin][[word, tag]] += 1
+      AGES[utterance.age_bin][[word, tag]] += 1
     else
       $stderr.puts "Cannot find an entry for: (#{word}, #{tag})"
       $stderr.puts "\t'#{utterance.tokenized.join(' ')}'"
@@ -556,9 +553,43 @@ def count_words(utterance)
   end
 end
 
+def transcribe(utterances, filename)
+  # Set up metadata
+  trans = {
+    metadata: utterances[0].metadata.to_a,
+    utterances: utterances.collect(&:to_h)
+  }
+  puts YAML.dump(trans)
+end
+
+def words_to_YAML(utterances, filename)
+  result = Hash.new do |hash, key|
+    hash[key] = Hash.new nil
+  end
+
+  AGES.each_key do |age|
+    AGES[age].each_pair do |verb, count|
+      data = VERB_DATA[verb]
+      result[age][verb] = {
+        CHILDESCount: count.to_i,
+        Age: age.to_i,
+        Form: data[:Form].to_s,
+        Category: data[:Category].to_s,
+        Lemma: data[:Lemma].to_s,
+        StemTransform: data[:StemTransform].to_s,
+        Suffix: data[:Suffix].to_s,
+        CELEXFrequency: data[:CELEXFrequency].to_i,
+        PTBFrequency: data[:PTBFrequency].to_i
+      }
+    end
+  end
+
+  DataReader.save(filename, result, :YAML, true)
+end
+
 corpus_metadata = {}
 # For each file specified in corpus-file-info.rb
-$childes_files.each do |file_info|
+CorpusInfo::CHILDES_FILES.each do |file_info|
   # File_info is an array of hashes, each specifying one .cha file
   # We parse each file individually
 
@@ -578,47 +609,9 @@ $childes_files.each do |file_info|
     corpus_metadata[metadata_file] = File.new(metadata_file, 'r').readlines
   end
 
-  $utterances = parseCHILDESFile(file_info, corpus_metadata[metadata_file])
-
-  # utterances.each { |u| puts u.inspect }
+  utterances = parseCHILDESFile(file_info, corpus_metadata[metadata_file])
 
   # This is dependent on the behavior we want
   # words_to_YAML(utterances, './CHILDES-by-ages.yaml')
+  transcribe(utterances, './CHILDES-by-ages.yaml')
 end
-
-def words_to_YAML(utterances, filename)
-  $result = Hash.new do |hash, key|
-    hash[key] = Hash.new nil
-  end
-
-  $ages.each_key do |age|
-    $ages[age].each_pair do |verb, count|
-      data = $verb_data[verb]
-      $result[age][verb] = {
-        CHILDESCount: count.to_i,
-        Age: age.to_i,
-        Form: data[:Form].to_s,
-        Category: data[:Category].to_s,
-        Lemma: data[:Lemma].to_s,
-        StemTransform: data[:StemTransform].to_s,
-        Suffix: data[:Suffix].to_s,
-        CELEXFrequency: data[:CELEXFrequency].to_i,
-        PTBFrequency: data[:PTBFrequency].to_i
-      }
-    end
-  end
-
-  DataReader.save(filename, $result, :YAML, true)
-end
-
-def transcribe(utterances, filename)
-  # Set up metadata
-  trans = {
-    metadata: utterances[0].metadata.to_a,
-    utterances: utterances.collect(&:to_h)
-  }
-  puts YAML.dump(trans)
-end
-
-transcribe($utterances, './CHILDES-by-ages.yaml')
-# words_to_YAML($utterances, './CHILDES-by-ages.yaml')
