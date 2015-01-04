@@ -3,7 +3,6 @@ require 'treetop'
 require './mor'
 require './chat'
 require 'optparse'
-require 'ostruct'
 
 MOR_PARSER = MorParser.new
 CHAT_PARSER = ChatParser.new
