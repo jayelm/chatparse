@@ -238,15 +238,15 @@ class CHILDESUtterance
                 :utterance_xml, :cleaned_utterance, :utterance_tokens, :age,
                 :age_bin
 
-  def initialize(num, utterance, file_info, metadata, corpusMetadata)
-    # Set metadata
+  def initialize(num, utterance, filename, metadata)
+    # corpusMetadata/@corpus_metadata param/variable omitted.
+    # file_info -> filename
     @tokenized = nil
     @num = num
-    @file_info = file_info
+    @filename = filename
     # Make metadata object from Array
     @metadata = CHILDESUtteranceMetadata.new(Array.new(metadata))
     # This is the metadata attached to the corpus file in parent directory
-    @corpus_metadata = Array.new(corpusMetadata)
 
     tokens = utterance.first.split.map(&:strip)
 
@@ -268,9 +268,6 @@ class CHILDESUtterance
         /mhm/, 'yes'
       ).split.map(&:strip)
     end
-
-    @age = file_info[:Years].to_f * 12.0 + file_info[:Months].to_f
-    @age_bin = @age.ceil
 
     @annotations = Hash.new nil
     annotations = Array.new(utterance.slice(1..-1))
@@ -375,7 +372,6 @@ class CHILDESUtterance
       File: #{@file.inspect}
       MetaData: #{@metadata.inspect}
       Corpus: #{@corpus.inspect}
-      CorpusMetaData: #{@corpus_metadata.inspect}
     )
   end
 
@@ -391,12 +387,14 @@ class CHILDESUtterance
   end
 end # end childes utterance class
 
-def parseCHILDESFile(file_info, corpusMetadata)
+def parseCHILDESFile(filename)
   # Parses a single CHILDES file specified in corpus-file-info.rb
+  # corpus_metadata omitted. Not sure what to do about the file_info hash.
+  # Maybe an additional optional "metadata" file?
 
   # Get filename from file_info hash
-  puts "Parsing file #{file_info[:File]}"
-  lines = File.readlines("#{CHILDES_DIRECTORY}/#{file_info[:File]}")
+  puts "Parsing file #{filename}"
+  lines = File.readlines(filename)
 
   # grab the file fields
   fields = []
@@ -429,14 +427,11 @@ def parseCHILDESFile(file_info, corpusMetadata)
       metadata = metadata.push(field) unless field == ''
     when /^\*/ then # These are Utterances *CHI, *PAT, etc
       unless last_utterance == []
-        # If we have a last utterance, this
-        # invokes the block attached to this function,
-        # specifically, just count_words
+        # corpus_metadata param omitted, file_info hash -> filename
         utterances.push(CHILDESUtterance.new(utt_num += 1,
                                              last_utterance,
-                                             file_info,
-                                             metadata,
-                                             corpusMetadata))
+                                             filename,
+                                             metadata))
       end
       # Initialize our last utterance - so * marks beginning of utterances
       last_utterance = [field]
@@ -545,7 +540,7 @@ def count_words(utterance)
     else
       $stderr.puts "Cannot find an entry for: (#{word}, #{tag})"
       $stderr.puts "\t'#{utterance.tokenized.join(' ')}'"
-      $stderr.puts "\tfrom file: '#{utterance.file_info[:File]}'"
+      $stderr.puts "\tfrom file: '#{utterance.filename}'"
       $stderr.puts "\tmor_cat: '#{mor_cat}', fusional: '#{fusional}'"
       $stderr.puts "\tsuffix: '#{suffix}'"
       puts morphology
