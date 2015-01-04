@@ -256,12 +256,13 @@ class Utterance
         end
 
         if @tokenized && @annotations[:mor]
-          # FIXME: Avoid 3+ levels of block nesting
           if @tokenized.length != @annotations[:mor].length
-            $stderr.puts "Tokenization and morphology don't match:"
-            $stderr.puts "\t#{@raw_utterance}"
-            $stderr.puts "\t#{@tokenized.join(' ')}"
-            $stderr.puts "\t#{morph}"
+            # Immediate FIXME: This shuld not result in a nil tokenization,
+            # need to distinguish between false alarms and real issues
+            # $stderr.puts "Tokenization and morphology don't match:"
+            # $stderr.puts "\t#{@raw_utterance}"
+            # $stderr.puts "\t#{@tokenized.join(' ')}"
+            # $stderr.puts "\t#{morph}"
 
             @annotations[:mor] = nil
           else
@@ -269,8 +270,8 @@ class Utterance
               f = get_MOR_token_form(@annotations[:mor][i])
               next if f != @tokenized[i]
               # This happens when stem is different from token
-              $stderr.puts "Token and MOR don't match:"
-              $stderr.puts "\t#{@tokenized[i]}, #{f}"
+              # $stderr.puts "Token and MOR don't match:"
+              # $stderr.puts "\t#{@tokenized[i]}, #{f}"
             end
           end
         else
