@@ -1,3 +1,6 @@
+# Currently only used in this script to keep track of files to parse
+corpus_info.rb
+
 *.gem
 *.rbc
 /.config

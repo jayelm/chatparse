@@ -1,11 +1,6 @@
-require 'find'
-require 'sqlite3'
-require './corpus_info'
-require 'set'
 require 'treetop'
 require './mor'
 require './chat'
-require './data_reader'
 
 MISMATCHES = File.open('mismatches.txt', 'w')
 
