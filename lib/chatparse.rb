@@ -7,34 +7,10 @@ require './mor'
 require './chat'
 require './data_reader'
 
-CHILDES_DIRECTORY = '/home/jmu303/Documents/childes.psy.cmu.edu/data'
-
-VERB_DATA = DataReader.hashonkeys_load(
-  './verbs-CHILDES-SWBD.csv', [:Form, :Category], :CSV
-)
-
-VERBS = {}
-VERB_DATA.values.each { |x| VERBS[x[:Form]] = 1 }
-
-AGES = Hash.new { |hash, key| hash[key] = Hash.new 0 }
-
 MISMATCHES = File.open('mismatches.txt', 'w')
 
 MOR_PARSER = MorParser.new
 CHAT_PARSER = ChatParser.new
-
-def to_tree(sn)
-  # puts sn.struct.inspect if sn.respond_to?(:struct)
-  if sn.terminal?
-    sn.text_value
-  elsif sn.elements.all?(&:terminal?)
-    (sn.elements.map(&text_value)).join('')
-  else
-    extensions = sn.extension_modules[0].to_s.sub(/.*::/, '')
-    elements = sn.elements.map { |x| to_tree(x) unless x.empty? }.join(' ')
-    "(#{extensions} #{elements})"
-  end
-end
 
 # Metadata for a CHILDES Utterance that contains information about the
 # entire file.
@@ -443,111 +419,6 @@ def parseCHILDESFile(filename)
   utterances
 end
 
-def count_words(utterance)
-  # puts utterance
-  fail 'Utterance has not been tokenized' unless utterance.tokenized
-  fail 'No morphology' unless utterance.annotations[:Morphology]
-  fail 'Invalid speaker role' if
-    /(Target_Child|Child|Playmate|Non_Human|Environment|Camera_Operator)/ =~
-    utterance.metadata.participants[utterance.speaker][:Role]
-  fail 'Age outside range' unless 18.0 <= utterance.age && utterance.age <= 60.0
-
-  # For every token...
-  utterance.tokenized.length.times do |index|
-    word = utterance.tokenized[index]
-    # Get the morphology of the word
-    morphology = utterance.annotations[:Morphology][index]
-    # Get morphology token of the word
-    mor_cat = get_MOR_token_category(morphology)
-    next unless /^(v|aux|part)$/ =~ mor_cat
-    # If a verb, aux, or participle
-    # Get fusional suffix from .tt grammar parse
-    fusional = get_MOR_token_fusionalsuffixes(morphology)
-    # same as above
-    suffix = get_MOR_token_suffixes(morphology)
-    # mor_subcat = get_MOR_token_subcategory(morphology)
-    # puts "[fusional, suffix]"
-    # puts [fusional, suffix]
-    # puts "mor_cat"
-    # puts mor_cat
-    tag = case mor_cat
-          # FIXME: This v does not always mean verb, as evidenced
-          # by the very large amount of "Cannot find an entry for...
-          # With words like bed, interesting, box, page, etc
-          when /^v$/ then
-            case [fusional, suffix]
-            when ['', 'PAST'] then 'VBD' # regulars
-            when ['PAST', ''] then 'VBD' # irregulars
-            when ['PRES', ''] then 'VBP' # are
-            when ['PAST', ''] then 'VBD' # was
-            when ['PAST|13S', ''] then 'VBD' # was
-            when ['', '3S'] then 'VBZ'
-            when ['3S', ''] then 'VBZ'
-            when ['ZERO', ''] then 'VBP' # weak verbs
-            when ['1S', ''] then 'VBP' # am
-            when ['', ''] then (word == 'be') ? 'VB' : 'VBP'
-            else
-              $stderr.puts %W(
-                Don't know verb type: #{suffix} for word '#{word}'
-                with suffix '#{suffix}' and fusional '#{fusional}'
-              )
-            end
-          when /^aux$/ then
-            case [fusional, suffix]
-            # when ["", "PAST"] then "VBD"
-            when ['PAST', ''] then 'VBD' # did
-            when ['PRES', ''] then 'VBP' # are
-            when ['COND', ''] then 'VBP' # would
-            when ['', ''] then # shall, can, etc.
-              if word == 'could' then 'VBD'
-              elsif word == 'be' then 'VB'
-              else 'VBP'
-              end
-            when ['3S', ''] then 'VBZ'
-            when ['PAST|13S', '']  then 'VBD' # was
-            when ['PERF', '']  then 'VBN' # been
-            # Updated by Jesse
-            when ['PASTP', ''] then 'VBN' # Updated been
-            when ['', 'PRESP'] then 'VBG' # -ing
-            when ['1S', ''] then 'VBP' # am
-            else $stderr.puts %W(
-              Don't know auxiliary type: #{suffix} for word '#{word}'
-              with suffix '#{suffix}' and fusional '#{fusional}'
-            )
-            end
-          when /^part$/ then
-            case [fusional, suffix]
-            when ['', 'PERF'] then 'VBN'
-            when ['', 'PROG'] then 'VBG'
-            when ['PERF', ''] then 'VBN'
-            # ING verbs seems to be Gerund
-            # Updated by Jesse
-            when ['', 'PRESP'] then 'VBG' # -ing
-            when ['PASTP', ''] then 'VBN' # -en
-            when ['', 'PASTP'] then 'VBN' # -en
-            else
-              $stderr.puts %W(
-                Don't know participle type: #{suffix} for word '#{word}'
-                with category '#{mor_cat}' and fusional '#{fusional}'
-              )
-            end
-          else fail "Don't know this verbal category!!" end
-
-    if VERB_DATA.include?([word, tag])
-      # puts "#{word},#{mor_cat},#{mor_subcat},#{fusional},#{suffix}"
-      # Add one utterance count
-      AGES[utterance.age_bin][[word, tag]] += 1
-    else
-      $stderr.puts "Cannot find an entry for: (#{word}, #{tag})"
-      $stderr.puts "\t'#{utterance.tokenized.join(' ')}'"
-      $stderr.puts "\tfrom file: '#{utterance.filename}'"
-      $stderr.puts "\tmor_cat: '#{mor_cat}', fusional: '#{fusional}'"
-      $stderr.puts "\tsuffix: '#{suffix}'"
-      puts morphology
-    end
-  end
-end
-
 def transcribe(utterances, filename)
   # Set up metadata
   trans = {
@@ -555,58 +426,4 @@ def transcribe(utterances, filename)
     utterances: utterances.collect(&:to_h)
   }
   puts YAML.dump(trans)
-end
-
-def words_to_YAML(utterances, filename)
-  result = Hash.new do |hash, key|
-    hash[key] = Hash.new nil
-  end
-
-  AGES.each_key do |age|
-    AGES[age].each_pair do |verb, count|
-      data = VERB_DATA[verb]
-      result[age][verb] = {
-        CHILDESCount: count.to_i,
-        Age: age.to_i,
-        Form: data[:Form].to_s,
-        Category: data[:Category].to_s,
-        Lemma: data[:Lemma].to_s,
-        StemTransform: data[:StemTransform].to_s,
-        Suffix: data[:Suffix].to_s,
-        CELEXFrequency: data[:CELEXFrequency].to_i,
-        PTBFrequency: data[:PTBFrequency].to_i
-      }
-    end
-  end
-
-  DataReader.save(filename, result, :YAML, true)
-end
-
-corpus_metadata = {}
-# For each file specified in corpus-file-info.rb
-CorpusInfo::CHILDES_FILES.each do |file_info|
-  # File_info is an array of hashes, each specifying one .cha file
-  # We parse each file individually
-
-  # Bloom70:Peter
-  # Top becomes Bloom70
-  top, _ = file_info[:Corpus].split(':')
-  # There needs to be a metadata file.
-  # Top is corpus folder, CHILDES_DIRECTORY specified up top
-  metadata_file = "#{CHILDES_DIRECTORY}/#{top}/0metadata.cdc"
-
-  # If the metadata, and thus corpus, hasn't been processed yet
-  unless corpus_metadata.key?(metadata_file)
-    # Only prints if it's the first file in the corpus being parsed
-    $stderr.puts "Processing Corpus: #{file_info[:Corpus]}"
-    # Read the contents of the metadata file as a value for the
-    # corpus_metadata hash, where the file name is key
-    corpus_metadata[metadata_file] = File.new(metadata_file, 'r').readlines
-  end
-
-  utterances = parseCHILDESFile(file_info, corpus_metadata[metadata_file])
-
-  # This is dependent on the behavior we want
-  # words_to_YAML(utterances, './CHILDES-by-ages.yaml')
-  transcribe(utterances, './CHILDES-by-ages.yaml')
 end
