@@ -5,8 +5,6 @@ require './chat'
 require 'optparse'
 require 'ostruct'
 
-MISMATCHES = File.open('mismatches.txt', 'w')
-
 MOR_PARSER = MorParser.new
 CHAT_PARSER = ChatParser.new
 
@@ -232,9 +230,7 @@ class Utterance
     # Parse chat format
     p = CHAT_PARSER.parse(@raw_utterance)
     if p.nil?
-      MISMATCHES.puts "!!!!Can't CHAT Parse: #{@raw_utterance}"
-      puts "!!!!Can't CHAT Parse: #{@raw_utterance}"
-      $stdout.flush
+      $stderr.puts "!!!!Can't CHAT Parse: #{@raw_utterance}"
     else
       @tokenized = p.replace.gsub(
         / ta /, ' to ' # Basic replacements
@@ -254,35 +250,27 @@ class Utterance
 
         parse = MOR_PARSER.parse(morph)
         if parse.nil? || parse == []
-          MISMATCHES.puts "Can't MOR parse: #{annotations}"
-          puts "Can't MOR parse: #{annotations}"
-          $stdout.flush
+          $stderr.puts "Can't MOR parse: #{annotations}"
         else
           @annotations[:mor] = parse.struct.map(&:first)
-          # puts "@annotations[:mor]: #{@annotations[:mor]}"
-          $stdout.flush
         end
 
         if @tokenized && @annotations[:mor]
           # FIXME: Avoid 3+ levels of block nesting
           if @tokenized.length != @annotations[:mor].length
-            MISMATCHES.puts "Tokenization and morphology don't match:"
-            MISMATCHES.puts "\t#{@raw_utterance}"
-            MISMATCHES.puts "\t#{@tokenized.join(' ')}"
-            MISMATCHES.puts "\t#{morph}"
-            # puts "Tokenization and morphology don't match:"
-            # puts "\t#{@raw_utterance}"
-            # puts "\t#{@tokenized.join(' ')}"
-            # puts "\t#{morph}"
+            $stderr.puts "Tokenization and morphology don't match:"
+            $stderr.puts "\t#{@raw_utterance}"
+            $stderr.puts "\t#{@tokenized.join(' ')}"
+            $stderr.puts "\t#{morph}"
+
             @annotations[:mor] = nil
           else
             @tokenized.length.times do |i|
               f = get_MOR_token_form(@annotations[:mor][i])
               next if f != @tokenized[i]
               # This happens when stem is different from token
-              MISMATCHES.puts "Token and MOR don't match:"
-              MISMATCHES.puts "\t#{@tokenized[i]}, #{f}"
-              # puts "Token and MOR don't match: #{@tokenized[i]}, #{f}"
+              $stderr.puts "Token and MOR don't match:"
+              $stderr.puts "\t#{@tokenized[i]}, #{f}"
             end
           end
         else
