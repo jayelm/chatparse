@@ -10,9 +10,9 @@ MISMATCHES = File.open('mismatches.txt', 'w')
 MOR_PARSER = MorParser.new
 CHAT_PARSER = ChatParser.new
 
-# Metadata for a CHILDES Utterance that contains information about the
+# Metadata for a CHAT Utterance that also contains information about the
 # entire file.
-class CHILDESUtteranceMetadata
+class UtteranceMetadata
   attr_accessor :encoding, :participants, :languages, :situation, :warnings,
                 :date, :comments, :birth, :location
 
@@ -204,9 +204,9 @@ def get_MOR_token_suffixes(word_group)
   end).join('-')
 end
 
-# Base CHILDES Utterance class, including instance attributes such
+# Base Utterance class, including instance attributes such
 # as the raw utterance, tokenized forms, parsed morphologies, and more.
-class CHILDESUtterance
+class Utterance
   attr_accessor :num, :raw_utterance, :tokenized, :file_info, :speaker,
                 :utterance_tokens, :annotations, :metadata, :corpus_metadata,
                 :utterance_xml, :cleaned_utterance, :utterance_tokens, :age,
@@ -219,7 +219,7 @@ class CHILDESUtterance
     @num = num
     @filename = filename
     # Make metadata object from Array
-    @metadata = CHILDESUtteranceMetadata.new(Array.new(metadata))
+    @metadata = UtteranceMetadata.new(Array.new(metadata))
     # This is the metadata attached to the corpus file in parent directory
 
     tokens = utterance.first.split.map(&:strip)
@@ -361,8 +361,8 @@ class CHILDESUtterance
   end
 end # end childes utterance class
 
-def parseCHILDESFile(filename)
-  # Parses a single CHILDES file specified in corpus-file-info.rb
+def parse_file(filename)
+  # Parses a single file specified in corpus-file-info.rb
   # corpus_metadata omitted. Not sure what to do about the file_info hash.
   # Maybe an additional optional "metadata" file?
 
@@ -402,10 +402,10 @@ def parseCHILDESFile(filename)
     when /^\*/ then # These are Utterances *CHI, *PAT, etc
       unless last_utterance == []
         # corpus_metadata param omitted, file_info hash -> filename
-        utterances.push(CHILDESUtterance.new(utt_num += 1,
-                                             last_utterance,
-                                             filename,
-                                             metadata))
+        utterances.push(Utterance.new(utt_num += 1,
+                                      last_utterance,
+                                      filename,
+                                      metadata))
       end
       # Initialize our last utterance - so * marks beginning of utterances
       last_utterance = [field]
@@ -417,13 +417,13 @@ def parseCHILDESFile(filename)
   utterances
 end
 
-def transcribe(utterances, filename)
+def utterances_to_yaml(utterances)
   # Set up metadata
-  trans = {
+  yaml = {
     metadata: utterances[0].metadata.to_a,
     utterances: utterances.collect(&:to_h)
   }
-  puts YAML.dump(trans)
+  YAML.dump(yaml)
 end
 
 options = {}
@@ -463,7 +463,7 @@ end
 optparser.parse!
 
 ARGV.each do |f|
-  utterances = parseCHILDESFile(f)
+  utterances = parse_file(f)
   yaml = utterances_to_yaml(utterances)
   puts yaml
 end
