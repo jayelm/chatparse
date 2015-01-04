@@ -258,14 +258,14 @@ class Utterance
           puts "Can't MOR parse: #{annotations}"
           $stdout.flush
         else
-          @annotations[:Morphology] = parse.struct.map(&:first)
-          # puts "@annotations[:Morphology]: #{@annotations[:Morphology]}"
+          @annotations[:mor] = parse.struct.map(&:first)
+          # puts "@annotations[:mor]: #{@annotations[:mor]}"
           $stdout.flush
         end
 
-        if @tokenized && @annotations[:Morphology]
+        if @tokenized && @annotations[:mor]
           # FIXME: Avoid 3+ levels of block nesting
-          if @tokenized.length != @annotations[:Morphology].length
+          if @tokenized.length != @annotations[:mor].length
             MISMATCHES.puts "Tokenization and morphology don't match:"
             MISMATCHES.puts "\t#{@raw_utterance}"
             MISMATCHES.puts "\t#{@tokenized.join(' ')}"
@@ -274,10 +274,10 @@ class Utterance
             # puts "\t#{@raw_utterance}"
             # puts "\t#{@tokenized.join(' ')}"
             # puts "\t#{morph}"
-            @annotations[:Morphology] = nil
+            @annotations[:mor] = nil
           else
             @tokenized.length.times do |i|
-              f = get_MOR_token_form(@annotations[:Morphology][i])
+              f = get_MOR_token_form(@annotations[:mor][i])
               next if f != @tokenized[i]
               # This happens when stem is different from token
               MISMATCHES.puts "Token and MOR don't match:"
@@ -287,54 +287,14 @@ class Utterance
           end
         else
           fail "Nil tokenization: #{@raw_utterance}"
-          # TODO: We're failing for now, not sure if this should happen at all
-          # MISMATCHES.puts "Nil tokenization: #{@raw_utterance}"
-          # puts "Nil tokenization: #{@raw_utterance}"
         end
-      # Prefacing with x means non-standard CHAT feature
       when /^%xgra:/ # More advanced GRA feature (not sure what though)
-        @annotations[:Syntax] = tier.gsub(/%(.*?):\t/, '').split.map(&:strip)
-      # FIXME: Can I DRY this?
-      # Immediate TODO: Store the symbol into a variable, and convert all to 3
-      when /^%com:/ # General comment
-        @annotations[:Com] = tier.gsub(/%(.*?):\t/, '')
-      when /^%act:/
-        @annotations[:Action] = tier.gsub(/%(.*?):\t/, '')
-      when /^%int:/
-        @annotations[:Intonation] = tier.gsub(/%(.*?):\t/, '')
-      when /^%exp:/
-        @annotations[:Exp] = tier.gsub(/%(.*?):\t/, '')
-      when /^%pho:/
-        @annotations[:Phonology] = tier.gsub(/%(.*?):\t/, '')
-      when /^%spa:/
-        @annotations[:Spa] = tier.gsub(/%(.*?):\t/, '')
-      when /^%par:/
-        @annotations[:Par] = tier.gsub(/%(.*?):\t/, '')
-      when /^%alt:/
-        @annotations[:Alt] = tier.gsub(/%(.*?):\t/, '')
-      when /^%gpx:/
-        @annotations[:Gpx] = tier.gsub(/%(.*?):\t/, '')
-      when /^%sit:/
-        @annotations[:Sit] = tier.gsub(/%(.*?):\t/, '')
-      when /^%add:/
-        @annotations[:Add] = tier.gsub(/%(.*?):\t/, '')
-      when /^%err:/
-        @annotations[:Err] = tier.gsub(/%(.*?):\t/, '')
-      when /^%eng:/
-        @annotations[:English] = tier.gsub(/%(.*?):\t/, '')
-      when /^%trn:/
-        @annotations[:Trn] = tier.gsub(/%(.*?):\t/, '')
-      when /^%xgrt:/
-        @annotations[:Xgrt] = tier.gsub(/%(.*?):\t/, '')
-      when /^%pht:/
-        @annotations[:Pht] = tier.gsub(/%(.*?):\t/, '')
-      # New annotations added
-      when /^%gra:/  # Standard grammatical relations tier
-        @annotations[:Gra] = tier.gsub(/%(.*?):\t/, '')
-      when /%xpho:/  # Non-standard phoneme tier
-        @annotations[:Xpho] = tier.gsub(/%(.*?):\t/, '')
-      when /^%grt:/  # Standard GRT tier
-        @annotations[:grt] = tier.gsub(/%(.*?):\t/, '')
+        # NOTE: This is syntax. It might be important to have that noted
+        # somewhere else (previously it was with the :Syntax key)
+        @annotations[:xgra] = tier.gsub(/%(.*?):\t/, '').split.map(&:strip)
+      when /^%(.{3,4}):/ # All other annotations are treated the same
+        # This is to_sym since everything else is!
+        @annotations[$1.to_sym] = tier.gsub(/%(.*?):\t/, '')
       else fail "Unknown Tier: #{tier}"
       end
     end
