@@ -1,6 +1,9 @@
+require 'yaml'
 require 'treetop'
 require './mor'
 require './chat'
+require 'optparse'
+require 'ostruct'
 
 MISMATCHES = File.open('mismatches.txt', 'w')
 
@@ -421,4 +424,46 @@ def transcribe(utterances, filename)
     utterances: utterances.collect(&:to_h)
   }
   puts YAML.dump(trans)
+end
+
+options = {}
+
+optparser = OptionParser.new do |opts|
+  opts.banner = 'Usage: chatparse.rb [options] file'
+
+  opts.separator ''
+  opts.separator 'Specific options:'
+
+  # TODO: Option for supplying metadata file
+
+  options[:reverse] = false
+  opts.on('-r', '--reverse', 'Convert YAML to CHAT') do
+    options[:reverse] = true
+  end
+
+  opts.separator ''
+  opts.separator 'Common options:'
+
+  opts.on_tail('-h', '--help', 'Show this message') do
+    puts opts
+    exit
+  end
+
+  opts.on_tail('-v', '--version', 'Show version') do
+    puts '0.0.0'
+    exit
+  end
+end
+
+if ARGV.empty?
+  puts 'Usage: chatparse.rb [options] file'
+  exit(-1)
+end
+
+optparser.parse!
+
+ARGV.each do |f|
+  utterances = parseCHILDESFile(f)
+  yaml = utterances_to_yaml(utterances)
+  puts yaml
 end
