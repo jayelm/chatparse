@@ -375,6 +375,10 @@ def utterances_to_yaml(utterances)
   YAML.dump(yaml)
 end
 
+def yaml_to_chat(raw)
+  puts raw[:Metadata]
+end
+
 options = {}
 
 optparser = OptionParser.new do |opts|
@@ -412,7 +416,21 @@ end
 optparser.parse!
 
 ARGV.each do |f|
-  utterances = parse_file(f)
-  yaml = utterances_to_yaml(utterances)
-  puts yaml
+  if options[:reverse]
+    raw = YAML.load_file(f)
+    puts yaml_to_chat(raw)
+  else
+    utterances = parse_file(f)
+    yaml = utterances_to_yaml(utterances)
+
+    if f.end_with?('.cha')
+      new = f.gsub('.cha', '.yaml')
+    else
+      new = "#{f}.yaml"
+    end
+    File.open(new, 'w') do |fout|
+      fout.write(yaml)
+    end
+
+  end
 end
