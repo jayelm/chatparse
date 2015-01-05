@@ -3,96 +3,60 @@ require 'treetop'
 require './mor'
 require './chat'
 require 'optparse'
+require 'ostruct'
 
 MOR_PARSER = MorParser.new
 CHAT_PARSER = ChatParser.new
 
 # Metadata for a CHAT Utterance that also contains information about the
 # entire file.
-class UtteranceMetadata
-  attr_accessor :encoding, :participants, :languages, :situation, :warnings,
-                :date, :comments, :birth, :location
-
+class UtteranceMetadata < OpenStruct
   def initialize(metadata)
-    @encoding = ''
-    @participants = {}
-    @languages = []
-    @situation = ''
-    @warnings = []
-    @date = ''
-    @comments = []
-    @birth = {}
-    @location = ''
+    super()
+    # defaults
+    self[:encoding] = 'utf8'
 
     metadata.each do |field|
       field.gsub!(/[\t]/, ' ')
       case field
-      when /^@UTF8/ then
-        @encoding = 'utf8'
-      when /^@Begin/ then
-      when /^@Languages:/ then
-        @languages = field.gsub(/^@Languages:/, '').strip
-      when /^@Participants:/ then
+      when /^@UTF8/
+        self.encoding = 'utf8'
+      when /^@Begin/
+      when /^@Participants:/
+        self.participants ||= {}
         participants = field.gsub(/^@Participants:/, '').split(',').map(&:strip)
         participants.each do |p|
           code, name, description = p.split.map(&:strip)
-          @participants[code] = {
+          self.participants[code] = {
             Code: code, Name: name, Description: description
           }
         end
-      when /^@ID:/ then
+      when /^@ID:/
+        # This necessitates @participants presence!
+        fail 'No participants recorded' unless self.participants
         language, corpus, code, age, sex, group, ses, role, education =
           field.gsub(/^@ID:/, '').split('|').map(&:strip)
-        @participants[code] = {} if @participants[code].nil?
-        @participants[code].merge!(Language: language,
-                                   Corpus: corpus,
-                                   Age: age,
-                                   Sex: sex,
-                                   Group: group,
-                                   SES: ses,
-                                   Role: role,
-                                   Education: education)
-      when /^@Media:/ then # TODO: is this skipping?
-      when /^@Situation:/ then
-        @situation = field.gsub(/^@Situation:/, '').strip
-      when /^@Warning:/ then
-        @warnings = @warnings.push(field.gsub(/^@Warning:/, '').strip)
-      when /^@Date:/ then
-        @situation = field.gsub(/^@Situation:/, '').strip
-      when /^@Comment:/ then
-        @comments = @comments.push(field.gsub(/^@Comment:/, '').strip)
-      when /^@Tape Location:/ then
-      when /^@G:/ then
-      when /^@Birth of (...):/ then
-        @birth[$1] = field.gsub(/^@Birth of (...):/, '').strip
-      when /^@Time Start:/ then
-      when /^@Location:/ then
-        @location = field.gsub(/^@Location:/, '').strip
-      when /^@Activities:/ then
-      when /^@Time Duration:/ then
-      when /^@Bg:/ then
-      when /^@Bg/ then
-      when /^@Eg:/ then
-      when /^@Eg/ then
-      when /^@New Episode/ then
-      when /^@Transcriber:/ then
-      when /^@Room Layout:/ then
-      when /^@Color words:/ then
-      when /^@Bck:/ then
-      # Added by Jesse
-      when /^@PID:/ then
-      when /^@Font:/ then  # Not needed, only in Brown/Eve
+        self.participants[code] ||= {}
+        self.participants[code].merge!(Language: language,
+                                       Corpus: corpus,
+                                       Age: age,
+                                       Sex: sex,
+                                       Group: group,
+                                       SES: ses,
+                                       Role: role,
+                                       Education: education)
+      when /^@Warning:/
+        self.warnings ||= []
+        warnings.push(field.gsub(/^@Warning:/, '').strip)
+      when /^@Comment:/
+        self.comments ||= []
+        comments.push(field.gsub(/^@Comment:/, '').strip)
+      when /^@Birth of (...):/
+        self.birth ||= {}
+        birth[$1] = field.gsub(/^@Birth of (...):/, '').strip
+      when /^@(.*?):/ # Non-greedy
+        self[$1.to_sym] = field.gsub(/^@#{$1}:/, '').strip
       else fail "Unknown metadata field: #{field}" end
-    end
-  end
-
-  def to_a
-    a = []
-    # Hash of instance variables
-    vars = Hash[instance_variables.map { |n| [n, instance_variable_get(n)] }]
-    vars.each do |k, v|
-      # FIXME: do we just leave symbol keys alone?
-      a.push(k => v)
     end
   end
 end
@@ -368,7 +332,7 @@ end
 def utterances_to_yaml(utterances)
   # Set up metadata
   yaml = {
-    metadata: utterances[0].metadata.to_a,
+    metadata: utterances[0].metadata.to_h,
     utterances: utterances.collect(&:to_h)
   }
   YAML.dump(yaml)
