@@ -168,10 +168,8 @@ end
 # Base Utterance class, including instance attributes such
 # as the raw utterance, tokenized forms, parsed morphologies, and more.
 class Utterance
-  attr_accessor :num, :raw_utterance, :tokenized, :file_info, :speaker,
-                :utterance_tokens, :annotations, :metadata, :corpus_metadata,
-                :utterance_xml, :cleaned_utterance, :utterance_tokens, :age,
-                :age_bin
+  attr_accessor :num, :raw_utterance, :tokenized, :filename, :speaker,
+                :annotations, :metadata
 
   def initialize(num, utterance, filename, metadata)
     # corpusMetadata/@corpus_metadata param/variable omitted.
@@ -226,12 +224,11 @@ class Utterance
             # $stderr.puts "\t#{@raw_utterance}"
             # $stderr.puts "\t#{@tokenized.join(' ')}"
             # $stderr.puts "\t#{morph}"
-
             @annotations[:mor] = nil
-          else
+          else # Verify the tokenization matches
             @tokenized.length.times do |i|
               f = get_MOR_token_form(@annotations[:mor][i])
-              next if f != @tokenized[i]
+              next if f == @tokenized[i]
               # This happens when stem is different from token
               # $stderr.puts "Token and MOR don't match:"
               # $stderr.puts "\t#{@tokenized[i]}, #{f}"
@@ -366,7 +363,7 @@ optparser = OptionParser.new do |opts|
   end
 
   opts.on_tail('-v', '--version', 'Show version') do
-    puts '0.0.0'
+    puts 'v0.0'
     exit
   end
 end
