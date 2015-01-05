@@ -336,7 +336,64 @@ def utterances_to_yaml(utterances)
 end
 
 def yaml_to_chat(raw)
-  puts raw[:Metadata]
+  lines = []
+  fail 'Invalid format: no metadata found' unless raw[:metadata]
+  fail 'Invalid format: no utterances found' unless raw[:utterances]
+  metadata = raw[:metadata]
+  utterances = raw[:utterances]
+  lines.push(*yaml_to_chat_metadata(metadata))
+  lines.push(*yaml_to_chat_utterances(utterances))
+  lines
+end
+
+def yaml_to_chat_metadata(metadata)
+  lines = []
+  lines.push("@#{metadata[:encoding]}")
+  lines.push("@PID: #{metadata[:PID]}")
+  lines.push('@Begin')
+  metadata.each do |k, v|
+    case k
+    when :encoding, :PID
+    when :participants
+      # TODO: Raise github issue to resolve naming (i.e. capitals?), the
+      # :paricipants symbol right above here
+      # TODO: Description is not an empty string, perhaps
+      # Age, Sex, Group, etc. should be nil instead of ''
+      # Create participants field as well as ID
+      ids = []
+      names = []
+      v.each do |code, info|
+        names.push("#{code} #{info[:Name]} #{info[:Description]}")
+        ids.push(
+          [:Language, :Corpus, :Code, :Age, :Sex, :Group, :SES,
+           :Role, :Education].collect{|s| info[s]}.join('|')
+        )
+      end
+      lines.push("@Participants: #{names.join(' , ')}")
+      ids.each { |i| lines.push("@ID: #{i}") }
+    when :comments
+      v.each do |comment|
+        lines.push("@Comment: #{comment}")
+      end
+    else
+      lines.push("@#{k}: #{v}")
+    end
+  end
+  lines
+end
+
+def yaml_to_chat_utterances(utterances)
+  lines = []
+  utterances.each do |u|
+    ulines = []
+    ulines.push("*#{u[:speaker]}: #{u[:raw]}")
+    # FIXME: how to deal with mor tags? Mors are parsed fully
+    u[:annotations].each do |k, v|
+      ulines.push("%#{k}: #{v}")
+    end
+    lines.push(*ulines)
+  end
+  lines
 end
 
 options = {}
@@ -376,21 +433,21 @@ end
 optparser.parse!
 
 ARGV.each do |f|
+  new = f.end_with?('.cha') ? f.gsub('cha', 'yaml') : "#{f}.yaml"
+
   if options[:reverse]
     raw = YAML.load_file(f)
-    puts yaml_to_chat(raw)
+    chat = yaml_to_chat(raw)
+
+    File.open(new, 'w') do |fout|
+      fout.write(chat)
+    end
   else
     utterances = parse_file(f)
     yaml = utterances_to_yaml(utterances)
 
-    if f.end_with?('.cha')
-      new = f.gsub('.cha', '.yaml')
-    else
-      new = "#{f}.yaml"
-    end
     File.open(new, 'w') do |fout|
       fout.write(yaml)
     end
-
   end
 end
