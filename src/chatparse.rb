@@ -433,7 +433,7 @@ end
 optparser.parse!
 
 ARGV.each do |f|
-  new_f = f.end_with?('.cha') ? f.gsub('cha', 'yaml') : "#{f}.yaml"
+  new_f = f.end_with?('.cha') ? f.gsub('.cha', '.yaml') : "#{f}.yaml"
 
   if options[:reverse]
     raw = YAML.load_file(f)
