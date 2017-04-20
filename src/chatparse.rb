@@ -433,20 +433,20 @@ end
 optparser.parse!
 
 ARGV.each do |f|
-  new = f.end_with?('.cha') ? f.gsub('cha', 'yaml') : "#{f}.yaml"
+  new_f = f.end_with?('.cha') ? f.gsub('cha', 'yaml') : "#{f}.yaml"
 
   if options[:reverse]
     raw = YAML.load_file(f)
     chat = yaml_to_chat(raw)
 
-    File.open(new, 'w') do |fout|
+    File.open(new_f, 'w') do |fout|
       fout.write(chat)
     end
   else
     utterances = parse_file(f)
     yaml = utterances_to_yaml(utterances)
 
-    File.open(new, 'w') do |fout|
+    File.open(new_f, 'w') do |fout|
       fout.write(yaml)
     end
   end
